@@ -73,13 +73,25 @@ plot(lmw.out1)
 plot(lmw.out2)
 plot(lmw.out3)
 
+png("images/balancing_mod1.jpeg", height = 2000, width = 1500, res = 300)
 plot(summary(lmw.out1))
+dev.off()
+png("images/balancing_mod2.jpeg", height = 2000, width = 1500, res = 300)
 plot(summary(lmw.out2))
+dev.off()
+png("images/balancing_mod3.jpeg", height = 2000, width = 1500, res = 300)
 plot(summary(lmw.out3))
+dev.off()
 
+png("images/influencedist_mod1.jpeg", height = 1000, width = 700, res = 200)
 plot(lmw.out1, type = "influence", outcome = mean4maxOzone)
+dev.off()
+png("images/influencedist_mod2.jpeg", height = 1000, width = 700, res = 200)
 plot(lmw.out2, type = "influence", outcome = mean4maxOzone)
+dev.off()
+png("images/influencedist_mod3.jpeg", height = 1000, width = 700, res = 200)
 plot(lmw.out3, type = "influence", outcome = mean4maxOzone)
+dev.off()
 ```
 
 ## Model 1
