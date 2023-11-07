@@ -1,0 +1,216 @@
+---
+title: "Ozone Power Plant"
+author: "Sophie Woodward"
+date: "2023-11-06"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import packages
+```{r}
+library(DAPSm)
+library(lmw)
+library(mgcv)
+library(sf)
+library(mapview)
+library(ggplot2)
+library(maps)
+library(dataverse)
+library(gridExtra)
+```
+
+## Read in Replication Data from Dataverse 
+```{r}
+Sys.setenv("DATAVERSE_SERVER" = "dataverse.harvard.edu")
+analysis_dat = get_dataframe_by_doi(filedoi = "10.7910/DVN/DKXXSN/CQ8ZFZ")
+
+#summary(analysis_dat)
+analysis_dat$SnCR = ifelse(analysis_dat$SnCR, 'Treated', 'Control')
+
+us_map = map_data("usa")
+```
+
+## LMW exploratory
+```{r}
+## Naive
+lmw.out1 =
+  lmw(
+    ~ SnCR + pctCapacity_byHI + Phase2 + mean4MaxTemp + PctUrban + PctWhite + PctBlack + PctHisp + PctHighSchool + MedianHHInc + PctPoor + PctOccupied + PctMovedIn5 + MedianHValue + logHeatInput + logPopPerSQM + mostlyGas + small_nunits + med_nunits,
+    data = analysis_dat,
+    estimand = "ATT",
+    method = "URI",
+    treat = "SnCR"
+  )
+
+## Add spline function of space
+spl = smoothCon(s(Fac.Latitude, Fac.Longitude, k = 10),
+                data = analysis_dat,
+                knots = NULL)[[1]]
+# predictMat returns a matrix which will map the parameters associated with the smooth 
+# to the vector of values of the smooth evaluated at the covariate values given in object.
+Xp = PredictMat(spl,cbind.data.frame('Fac.Latitude' = analysis_dat$Fac.Latitude, 'Fac.Longitude' = analysis_dat$Fac.Longitude))
+
+lmw.out2 =
+  lmw( ~ SnCR + pctCapacity_byHI + Phase2 + mean4MaxTemp + PctUrban + PctWhite + PctBlack + PctHisp + PctHighSchool + MedianHHInc + PctPoor + PctOccupied + PctMovedIn5 + MedianHValue + logHeatInput + logPopPerSQM + mostlyGas + small_nunits + med_nunits + Xp,
+    data = analysis_dat,
+    estimand = "ATT",
+    method = "URI",
+    treat = "SnCR"
+  )
+
+lmw.out3 = lmw(
+    ~ SnCR + Xp,
+    data = analysis_dat,
+    estimand = "ATT",
+    method = "MRI",
+    treat = "SnCR"
+  )
+
+plot(lmw.out1)
+plot(lmw.out2)
+plot(lmw.out3)
+
+plot(summary(lmw.out1))
+plot(summary(lmw.out2))
+plot(summary(lmw.out3))
+
+plot(lmw.out1, type = "influence", outcome = mean4maxOzone)
+plot(lmw.out2, type = "influence", outcome = mean4maxOzone)
+plot(lmw.out3, type = "influence", outcome = mean4maxOzone)
+```
+
+## Weights
+```{r}
+# Plot facilities on top of US map.
+# Shape by treated or control. 
+# Color is the weight or influence.
+
+dat_sf = st_as_sf(data.frame(analysis_dat), coords = c("Fac.Longitude", "Fac.Latitude"),  crs = 4326)
+
+dat_sf$weights = lmw.out1$weights
+dat_sf$Name = rownames(dat_sf)
+
+ggplot() +
+  geom_polygon(data = us_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+  geom_sf(data = dat_sf, aes(shape = SnCR, color = weights), size = 4) + 
+  theme_minimal() + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        line = element_blank(),
+        axis.title = element_blank()) + 
+  scale_color_gradient2(midpoint=0, low="blue", mid="white",
+                     high="red", space ="Lab" ) + 
+  geom_sf_text(data = dat_sf, aes(label=ifelse(weights>0.02,Name,'')))
+
+dat_sf$influences = influence(lmw.out1, outcome = mean4maxOzone)$sic
+
+ggplot() +
+  geom_polygon(data = us_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+  geom_sf(data = dat_sf, aes(shape = SnCR, color = influences), size = 4) + 
+  theme_minimal() + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        line = element_blank(),
+        axis.title = element_blank()) + 
+  scale_color_gradient2(midpoint=0.5, low="lightblue", mid="white",
+                     high="red", space ="Lab" ) + 
+  geom_sf_text(data = dat_sf, aes(label=ifelse(influences>0.9,Name,'')))
+```
+
+## Model 2
+```{r}
+# Plot facilities on top of US map.
+# Shape by treated or control. 
+# Color is the weight or influence.
+
+dat_sf = st_as_sf(data.frame(analysis_dat), coords = c("Fac.Longitude", "Fac.Latitude"),  crs = 4326)
+
+dat_sf$weights = lmw.out2$weights
+dat_sf$Name = rownames(dat_sf)
+
+ggplot() +
+  geom_polygon(data = us_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+  geom_sf(data = dat_sf, aes(shape = SnCR, color = weights), size = 4) + 
+  theme_minimal() + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        line = element_blank(),
+        axis.title = element_blank()) + 
+  scale_color_gradient2(midpoint=0, low="blue", mid="white",
+                     high="red", space ="Lab" ) + 
+  geom_sf_text(data = dat_sf, aes(label=ifelse(weights>0.025,Name,'')))
+
+dat_sf$influences = influence(lmw.out2, outcome = mean4maxOzone)$sic
+
+ggplot() +
+  geom_polygon(data = us_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+  geom_sf(data = dat_sf, aes(shape = SnCR, color = influences), size = 4) + 
+  theme_minimal() + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        line = element_blank(),
+        axis.title = element_blank()) + 
+  scale_color_gradient2(midpoint=0.5, low="lightblue", mid="white",
+                     high="red", space ="Lab" ) + 
+  geom_sf_text(data = dat_sf, aes(label=ifelse(influences>0.9,Name,'')))
+```
+
+## Model 3
+```{r}
+# Plot facilities on top of US map.
+# Shape by treated or control. 
+# Color is the weight or influence.
+
+gs = list()
+
+dat_sf = st_as_sf(data.frame(analysis_dat), coords = c("Fac.Longitude", "Fac.Latitude"),  crs = 4326)
+
+dat_sf$weights = lmw.out3$weights
+dat_sf$Name = rownames(dat_sf)
+
+gs[[1]] = ggplot() +
+  geom_polygon(data = us_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+  geom_sf(data = dat_sf, aes(shape = SnCR, color = weights), size = 4) + 
+  theme_minimal() + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        line = element_blank(),
+        axis.title = element_blank()) + 
+  scale_color_gradient2(midpoint=0, low="blue", mid="white",
+                     high="red", space ="Lab" ) + 
+  geom_sf_text(data = dat_sf, aes(label=ifelse(weights>0.025,Name,'')))
+
+
+dat_sf = st_as_sf(data.frame(analysis_dat), coords = c("Fac.Longitude", "Fac.Latitude"),  crs = 4326)
+
+dat_sf$weights = lmw.out3$weights
+dat_sf$Name = rownames(dat_sf)
+dat_sf$influences = influence(lmw.out3, outcome = mean4maxOzone)$sic
+
+gs[[2]] = ggplot() +
+  geom_polygon(data = us_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
+  geom_sf(data = dat_sf, aes(shape = SnCR, color = influences), size = 4) + 
+  theme_minimal() + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        line = element_blank(),
+        axis.title = element_blank()) + 
+  scale_color_gradient2(midpoint=0.5, low="lightblue", mid="white",
+                     high="red", space ="Lab" ) + 
+  geom_sf_text(data = dat_sf, aes(label=ifelse(influences>0.9,Name,'')))
+
+grid.arrange(grobs = gs, nrow = 2)
+```
+
+
+
+
