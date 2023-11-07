@@ -22,7 +22,7 @@ library(dataverse)
 library(gridExtra)
 ```
 
-## Read in Replication Data from Dataverse 
+## Read in Georgia's Replication Data from Dataverse 
 ```{r}
 Sys.setenv("DATAVERSE_SERVER" = "dataverse.harvard.edu")
 analysis_dat = get_dataframe_by_doi(filedoi = "10.7910/DVN/DKXXSN/CQ8ZFZ")
@@ -82,18 +82,20 @@ plot(lmw.out2, type = "influence", outcome = mean4maxOzone)
 plot(lmw.out3, type = "influence", outcome = mean4maxOzone)
 ```
 
-## Weights
+## Model 1
 ```{r}
 # Plot facilities on top of US map.
 # Shape by treated or control. 
 # Color is the weight or influence.
+
+gs = list()
 
 dat_sf = st_as_sf(data.frame(analysis_dat), coords = c("Fac.Longitude", "Fac.Latitude"),  crs = 4326)
 
 dat_sf$weights = lmw.out1$weights
 dat_sf$Name = rownames(dat_sf)
 
-ggplot() +
+gs[[1]] = ggplot() +
   geom_polygon(data = us_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
   geom_sf(data = dat_sf, aes(shape = SnCR, color = weights), size = 4) + 
   theme_minimal() + 
@@ -101,14 +103,19 @@ ggplot() +
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
         line = element_blank(),
-        axis.title = element_blank()) + 
+        axis.title = element_blank(),
+        plot.title = element_text(size = 25)) + 
   scale_color_gradient2(midpoint=0, low="blue", mid="white",
                      high="red", space ="Lab" ) + 
-  geom_sf_text(data = dat_sf, aes(label=ifelse(weights>0.02,Name,'')))
+  geom_sf_text(data = dat_sf, aes(label=ifelse(weights>0.025,Name,''))) + 
+  labs(title = 'All Covariates')
 
+
+dat_sf = st_as_sf(data.frame(analysis_dat), coords = c("Fac.Longitude", "Fac.Latitude"),  crs = 4326)
+dat_sf$Name = rownames(dat_sf)
 dat_sf$influences = influence(lmw.out1, outcome = mean4maxOzone)$sic
 
-ggplot() +
+gs[[2]] = ggplot() +
   geom_polygon(data = us_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
   geom_sf(data = dat_sf, aes(shape = SnCR, color = influences), size = 4) + 
   theme_minimal() + 
@@ -120,6 +127,10 @@ ggplot() +
   scale_color_gradient2(midpoint=0.5, low="lightblue", mid="white",
                      high="red", space ="Lab" ) + 
   geom_sf_text(data = dat_sf, aes(label=ifelse(influences>0.9,Name,'')))
+
+png("images/mod1.jpeg", height = 2000, width = 2000, res = 200)
+grid.arrange(grobs = gs, nrow = 2)
+dev.off()
 ```
 
 ## Model 2
@@ -128,12 +139,14 @@ ggplot() +
 # Shape by treated or control. 
 # Color is the weight or influence.
 
+gs = list()
+
 dat_sf = st_as_sf(data.frame(analysis_dat), coords = c("Fac.Longitude", "Fac.Latitude"),  crs = 4326)
 
 dat_sf$weights = lmw.out2$weights
 dat_sf$Name = rownames(dat_sf)
 
-ggplot() +
+gs[[1]] = ggplot() +
   geom_polygon(data = us_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
   geom_sf(data = dat_sf, aes(shape = SnCR, color = weights), size = 4) + 
   theme_minimal() + 
@@ -141,14 +154,20 @@ ggplot() +
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
         line = element_blank(),
-        axis.title = element_blank()) + 
+        axis.title = element_blank(),
+        plot.title = element_text(size = 25)) + 
   scale_color_gradient2(midpoint=0, low="blue", mid="white",
                      high="red", space ="Lab" ) + 
-  geom_sf_text(data = dat_sf, aes(label=ifelse(weights>0.025,Name,'')))
+  geom_sf_text(data = dat_sf, aes(label=ifelse(weights>0.025,Name,''))) + 
+  labs(title = 'All Covariates + Spatial Spline (df = 10)')
 
+
+dat_sf = st_as_sf(data.frame(analysis_dat), coords = c("Fac.Longitude", "Fac.Latitude"),  crs = 4326)
+
+dat_sf$Name = rownames(dat_sf)
 dat_sf$influences = influence(lmw.out2, outcome = mean4maxOzone)$sic
 
-ggplot() +
+gs[[2]] = ggplot() +
   geom_polygon(data = us_map, aes(x = long, y = lat, group = group), fill = NA, color = "black") +
   geom_sf(data = dat_sf, aes(shape = SnCR, color = influences), size = 4) + 
   theme_minimal() + 
@@ -160,6 +179,10 @@ ggplot() +
   scale_color_gradient2(midpoint=0.5, low="lightblue", mid="white",
                      high="red", space ="Lab" ) + 
   geom_sf_text(data = dat_sf, aes(label=ifelse(influences>0.9,Name,'')))
+
+png("images/mod2.jpeg", height = 2000, width = 2000, res = 200)
+grid.arrange(grobs = gs, nrow = 2)
+dev.off()
 ```
 
 ## Model 3
@@ -183,10 +206,12 @@ gs[[1]] = ggplot() +
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
         line = element_blank(),
-        axis.title = element_blank()) + 
+        axis.title = element_blank(),
+        plot.title = element_text(size = 25)) + 
   scale_color_gradient2(midpoint=0, low="blue", mid="white",
                      high="red", space ="Lab" ) + 
-  geom_sf_text(data = dat_sf, aes(label=ifelse(weights>0.025,Name,'')))
+  geom_sf_text(data = dat_sf, aes(label=ifelse(weights>0.025,Name,''))) + 
+  labs(title = 'Spatial Spline (df = 10)')
 
 
 dat_sf = st_as_sf(data.frame(analysis_dat), coords = c("Fac.Longitude", "Fac.Latitude"),  crs = 4326)
@@ -208,8 +233,11 @@ gs[[2]] = ggplot() +
                      high="red", space ="Lab" ) + 
   geom_sf_text(data = dat_sf, aes(label=ifelse(influences>0.9,Name,'')))
 
+png("images/mod3.jpeg", height = 2000, width = 2000, res = 200)
 grid.arrange(grobs = gs, nrow = 2)
+dev.off()
 ```
+
 
 
 
