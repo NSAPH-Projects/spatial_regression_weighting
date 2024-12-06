@@ -1,0 +1,320 @@
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(sf)
+library(spdep)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(geosphere)
+library(igraph)
+library(gridExtra)
+library(Matrix)
+library(patchwork)
+library(rlang)
+library(xtable)
+library(tools)
+
+source('../impliedweights_randeffs.R')
+
+setwd('/Users/sophie/Documents/implied_weights/superfunds/')
+states <- st_read('/Users/sophie/Downloads/tl_2010_us_state10/tl_2010_us_state10.shp')
+
+# Read in preprocessed data
+load('data/preprocessed_superfunds.RData')
+
+us_outline <- ne_countries(scale = "medium", country = "United States of America", returnclass = "sf")
+
+# Plot Z on the map
+# order buffers by Z
+buffer_centroids <- st_centroid(buffers)
+buffer_centroids_ordered <- buffer_centroids[order(buffers$Z),]
+png('images/treatment.png', width = 1500, height = 800, res = 160)
+ggplot() +
+  # Add map outline
+  geom_sf(data = us_outline, fill = NA, color = "black", linetype = "solid") +
+  # Plot centroids with both color and shape mapped to factor(Z)
+  geom_sf(data = buffer_centroids_ordered, aes(color = factor(Z), shape = factor(Z)), size = 3) +
+  coord_sf(xlim = c(-125, -65), ylim = c(25, 50), expand = FALSE) +
+  labs(
+    title = "Superfund Sites that were cleaned up and removed from the National Priority List between 2001 and 2010",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank()
+  ) +
+  # Use the same variable for color and shape scales with unified legend
+  scale_color_manual(
+    values = c("0" = "red", "1" = "green"),
+    name = "Treatment (Cleanup)",
+    labels = c("Control", "Treated")
+  ) +
+  scale_shape_manual(
+    values = c("0" = 16, "1" = 17), # Circle for control, triangle for treated
+    name = "Treatment (Cleanup)",
+    labels = c("Control", "Treated")
+  )
+dev.off()
+
+# Next, visualize the confounders. 
+confounder_names <- c(
+  'population_density',
+  'percent_hispanic',
+  'percent_black',
+  'percent_indigenous',
+  'percent_asian',
+  'median_household_income',
+  'median_house_value',
+  'percent_poverty',
+  'percent_high_school_grad',
+  'median_year_built'
+)
+
+gs <- list()
+for (i in seq_along(confounder_names)) {
+  print(confounder_names[i])
+  # Order buffer_centroids by increasing confounder value
+  buffer_centroids <- buffer_centroids[order(buffers[[confounder_names[i]]]),]
+  gs[[i]] <- ggplot() +
+    geom_sf(data = us_outline, fill = NA, color = "black", linetype = "solid") +
+    geom_sf(data = buffer_centroids, 
+            aes(color = .data[[confounder_names[i]]], shape = factor(Z)), size = 2) + 
+    coord_sf(xlim = c(-125, -65), ylim = c(25, 50), expand = FALSE) +
+    labs(
+      title = confounder_names[i],
+      x = "Longitude",
+      y = "Latitude"
+    ) +
+    theme_minimal() +
+    theme(
+      panel.grid = element_blank(),
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      axis.title = element_blank(),
+      legend.position = "bottom",
+      legend.key.width = unit(1.2, "cm")
+    ) +
+    scale_color_viridis_c()+ 
+    scale_shape_manual(values = c("0" = 16, "1" = 17), guide = "none") # Remove shape legend
+}
+
+# Save the combined plot
+png('images/confounders.png', width = 2000, height = 1500, res = 120)
+grid.arrange(grobs = gs, ncol = 4)
+dev.off()
+
+# Order by cluster
+load('data/preprocessed_superfunds.RData')
+all_baseweights <- compute_allbaseweights(Z = Z, adjacency_matrix = adjacency_matrix,
+                                          statefactor = clusters,
+                                          sig2gam = 0.01,
+                                          phi = 0.99,
+                                          distmat = dmat/10000)
+allmin <- min(c(all_baseweights$baseCAR, all_baseweights$baseFE, all_baseweights$baseGP))
+allmax <- max(c(all_baseweights$baseCAR, all_baseweights$baseFE, all_baseweights$baseGP))
+# Merge the base weights with the data
+buffers_merged <- cbind(buffer_centroids, all_baseweights)
+# Plot baseCAR
+buffers_merged <- buffers_merged[order(buffers_merged$baseCAR),]
+gCAR <- ggplot() +
+  geom_sf(data = us_outline, fill = NA, color = "black", linetype = "solid") +
+  geom_sf(data = buffers_merged, aes(color = baseCAR, shape = factor(Z)), size = 3) +
+  coord_sf(xlim = c(-125, -65), ylim = c(25, 50), expand = FALSE) +
+  labs(
+    title = "CAR",
+    x = "Longitude",
+    y = "Latitude",
+    shape = "Treatment",
+    color = "Base weights"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank()
+  ) +
+  scale_color_gradient2(
+    low = "red", mid = "lightyellow", high = "blue", midpoint = 0, limits = c(allmin, allmax))
+
+buffers_merged <- buffers_merged[order(buffers_merged$baseFE),]
+gFE <- ggplot() +
+  geom_sf(data = states, fill = NA, color = "black", linetype = "solid") +
+  geom_sf(data = buffers_merged, aes(color = baseFE, shape = factor(Z)), size = 3) +
+  coord_sf(xlim = c(-125, -65), ylim = c(25, 50), expand = FALSE) +
+  labs(
+    title = "FE",
+    x = "Longitude",
+    y = "Latitude",
+    shape = "Treatment",
+    color = "Base weights"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank()
+  ) +
+  scale_color_gradient2(
+    low = "red", mid = "lightyellow", high = "blue", midpoint = 0, limits = c(allmin, allmax))
+
+buffers_merged <- buffers_merged[order(buffers_merged$baseGP),]
+gGP <- ggplot() +
+  geom_sf(data = us_outline, fill = NA, color = "black", linetype = "solid") +
+  geom_sf(data = buffers_merged, aes(color = baseGP, shape = factor(Z)), size = 3) +
+  coord_sf(xlim = c(-125, -65), ylim = c(25, 50), expand = FALSE) +
+  labs(
+    title = "GP",
+    x = "Longitude",
+    y = "Latitude",
+    shape = "Treatment",
+    color = "Base weights"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank()
+  ) +
+  scale_color_gradient2(
+    low = "red", mid = "lightyellow", high = "blue", midpoint = 0, limits = c(allmin, allmax))
+
+png('images/baseweights.png', width = 800, height = 1500, res = 120)
+grid.arrange(gCAR, gFE, gGP, ncol = 1)
+dev.off()
+
+# adjacency_lines <- data.frame()
+# coordinates <- st_coordinates(buffers_merged)
+# 
+# for (i in 1:nrow(adjacency_matrix)) {
+#   for (j in 1:ncol(adjacency_matrix)) {
+#     if (adjacency_matrix[i, j] == 1 && i < j) { # Ensure each edge is only added once
+#       adjacency_lines <- rbind(
+#         adjacency_lines,
+#         data.frame(
+#           x = coordinates[i, "X"],
+#           y = coordinates[i, "Y"],
+#           xend = coordinates[j, "X"],
+#           yend = coordinates[j, "Y"]
+#         )
+#       )
+#     }
+#   }
+# }
+
+# Plot with adjacency lines
+buffers_merged <- buffers_merged[order(buffers_merged$baseCAR), ]
+gCARnj <- ggplot() +
+  geom_sf(data = us_outline, fill = NA, color = "black", linetype = "solid") +
+  geom_sf(data = buffers_merged, aes(color = baseCAR, shape = factor(Z)), size = 4) +
+  # geom_segment(
+  #   data = adjacency_lines,
+  #   aes(x = x, y = y, xend = xend, yend = yend),
+  #   color = "gray", size = 0.5
+  # ) +
+  coord_sf(xlim = c(-80, -70), ylim = c(38, 46), expand = FALSE) +
+  labs(
+    title = "CAR",
+    x = "Longitude",
+    y = "Latitude",
+    shape = "Treatment",
+    color = "Base weights"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_color_gradient2(low = "red", mid = "lightyellow", high = "blue", midpoint = 0,
+                        limits = c(0, 0.02))
+
+buffers_merged <- buffers_merged[order(buffers_merged$baseFE), ]
+gFEnj <- ggplot() +
+  geom_sf(data = states, fill = NA, color = "black", linetype = "solid") +
+  geom_sf(data = buffers_merged, aes(color = baseFE, shape = factor(Z)), size = 4) +
+  coord_sf(xlim = c(-80, -70), ylim = c(38, 46), expand = FALSE) +
+  labs(
+    title = "FE",
+    x = "Longitude",
+    y = "Latitude",
+    shape = "Treatment",
+    color = "Base weights"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_color_gradient2(
+    low = "red", mid ="lightyellow", high = "blue", midpoint = 0,
+    limits = c(0, 0.02))
+
+buffers_merged <- buffers_merged[order(buffers_merged$baseGP),]
+gGPnj <- ggplot() +
+  geom_sf(data = us_outline, fill = NA, color = "black", linetype = "solid") + # add states outline
+  geom_sf(data = buffers_merged, aes(color = baseGP, shape = factor(Z)), size = 4) +
+  coord_sf(xlim = c(-80, -70), ylim = c(38, 46), expand = FALSE) +
+  labs(
+    title = "GP",
+    x = "Longitude",
+    y = "Latitude",
+    shape = "Treatment",
+    color = "Base weights"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_color_gradient2(
+    low = "red", mid = "lightyellow", high = "blue", midpoint = 0,
+    limits = c(0, 0.02))
+
+gCARnj <- gCARnj + theme(legend.position = "right")
+gFEnj <- gFEnj + theme(legend.position = "right")
+gGPnj <- gGPnj + theme(legend.position = "right")
+
+# Combine the plots with patchwork
+combined_plot <- (gCARnj + gFEnj + gGPnj) + 
+  plot_layout(ncol = 3, guides = "collect") 
+
+# Save the combined plot
+png('images/plot_nj.png', width = 2000, height = 800, res = 150)
+print(combined_plot)
+dev.off()
+
+# Create Data Characteristics Table
+# Data characteristics Table
+covs <- X[,-c(1,12)]
+summary_table <- data.frame(
+  Mean = round(apply(covs, 2, mean), 3),
+  SD = round(apply(covs, 2, sd), 3)
+)
+
+# Modify row names: Replace underscores with spaces and capitalize each word
+rownames(summary_table) <- gsub("_", " ", rownames(summary_table)) # Replace underscores
+rownames(summary_table) <- toTitleCase(rownames(summary_table))    # Capitalize words
+
+# Convert the data frame to an xtable object
+xtable_summary <- xtable(summary_table, caption = "Characteristics of the Data")
+
+# Print the table with options for formatting
+print(xtable_summary, type = "latex", caption.placement = "top", digits = 3)
+mean(Z)
+
+

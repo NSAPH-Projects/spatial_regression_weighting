@@ -1,8 +1,42 @@
-.Rproj.user
+# History files
 .Rhistory
+.Rapp.history
+
+# DS_Store files
+.DS_Store
+
+# Session Data files
 .RData
+.RDataTmp*
+*.rdata
+
+# User-specific files
 .Ruserdata
+
+# RStudio files
+.Rproj.user/
 *.Rproj
+
+# knitr and R markdown default cache directories
+*_cache/
+/cache/
+
+# R Environment Variables
+.Renviron
+
+# Data
+*.rds
 *.csv
-*.Rdata
+
+# htmls
+*.html
+
+# Folders
+*archived/*
 images/*
+frames/*
+sdwa_health_violations/*
+lead_service_lines/*
+superfunds/data/*
+superfunds/shapefiles/*
+preprocessing.R
