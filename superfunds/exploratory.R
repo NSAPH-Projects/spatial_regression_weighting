@@ -14,6 +14,8 @@ library(rlang)
 library(xtable)
 library(tools)
 
+setwd('/Users/sophie/Documents/implied_weights/superfunds/')
+
 source('../impliedweights_randeffs.R')
 
 setwd('/Users/sophie/Documents/implied_weights/superfunds/')
@@ -114,15 +116,31 @@ all_baseweights <- compute_allbaseweights(Z = Z, adjacency_matrix = adjacency_ma
                                           sig2gam = 0.01,
                                           phi = 0.99,
                                           distmat = dmat/10000)
+# Check all base weights sum to 1 in each treatment group
+sum(all_baseweights$basePooled[Z == 1])
+sum(all_baseweights$basePooled[Z == 0])
+sum(all_baseweights$baseRE[Z == 1])
+sum(all_baseweights$baseRE[Z == 0])
+sum(all_baseweights$baseCAR[Z == 1])
+sum(all_baseweights$baseCAR[Z == 0])
+sum(all_baseweights$baseFE[Z == 1])
+sum(all_baseweights$baseFE[Z == 0])
+sum(all_baseweights$baseGP[Z == 1])
+sum(all_baseweights$baseGP[Z == 0])
+sum(all_baseweights$baseSAR[Z == 1])
+sum(all_baseweights$baseSAR[Z == 0])
+
 allmin <- min(c(all_baseweights$baseCAR, all_baseweights$baseFE, all_baseweights$baseGP))
 allmax <- max(c(all_baseweights$baseCAR, all_baseweights$baseFE, all_baseweights$baseGP))
 # Merge the base weights with the data
+buffer_centroids <- st_centroid(buffers)
 buffers_merged <- cbind(buffer_centroids, all_baseweights)
+
 # Plot baseCAR
 buffers_merged <- buffers_merged[order(buffers_merged$baseCAR),]
 gCAR <- ggplot() +
-  geom_sf(data = us_outline, fill = NA, color = "black", linetype = "solid") +
-  geom_sf(data = buffers_merged, aes(color = baseCAR, shape = factor(Z)), size = 3) +
+  geom_sf(data = states, fill = NA, color = "black", linetype = "solid") +
+  geom_sf(data = buffers_merged, aes(color = baseCAR, shape = factor(Z)), size = 2) +
   coord_sf(xlim = c(-125, -65), ylim = c(25, 50), expand = FALSE) +
   labs(
     title = "CAR",
@@ -136,15 +154,17 @@ gCAR <- ggplot() +
     panel.grid = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank(),
-    axis.title = element_blank()
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5)
   ) +
   scale_color_gradient2(
     low = "red", mid = "lightyellow", high = "blue", midpoint = 0, limits = c(allmin, allmax))
 
+# Plot base FE
 buffers_merged <- buffers_merged[order(buffers_merged$baseFE),]
 gFE <- ggplot() +
   geom_sf(data = states, fill = NA, color = "black", linetype = "solid") +
-  geom_sf(data = buffers_merged, aes(color = baseFE, shape = factor(Z)), size = 3) +
+  geom_sf(data = buffers_merged, aes(color = baseFE, shape = factor(Z)), size = 2) +
   coord_sf(xlim = c(-125, -65), ylim = c(25, 50), expand = FALSE) +
   labs(
     title = "FE",
@@ -158,15 +178,17 @@ gFE <- ggplot() +
     panel.grid = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank(),
-    axis.title = element_blank()
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5)
   ) +
   scale_color_gradient2(
     low = "red", mid = "lightyellow", high = "blue", midpoint = 0, limits = c(allmin, allmax))
 
+# Plot base GP
 buffers_merged <- buffers_merged[order(buffers_merged$baseGP),]
 gGP <- ggplot() +
-  geom_sf(data = us_outline, fill = NA, color = "black", linetype = "solid") +
-  geom_sf(data = buffers_merged, aes(color = baseGP, shape = factor(Z)), size = 3) +
+  geom_sf(data = states, fill = NA, color = "black", linetype = "solid") +
+  geom_sf(data = buffers_merged, aes(color = baseGP, shape = factor(Z)), size = 2) +
   coord_sf(xlim = c(-125, -65), ylim = c(25, 50), expand = FALSE) +
   labs(
     title = "GP",
@@ -180,13 +202,22 @@ gGP <- ggplot() +
     panel.grid = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank(),
-    axis.title = element_blank()
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5)
   ) +
   scale_color_gradient2(
     low = "red", mid = "lightyellow", high = "blue", midpoint = 0, limits = c(allmin, allmax))
 
-png('images/baseweights.png', width = 800, height = 1500, res = 120)
-grid.arrange(gCAR, gFE, gGP, ncol = 1)
+gCAR <- gCAR + theme(legend.position = "right")
+gFE <- gFE + theme(legend.position = "right")
+gGP <- gGP + theme(legend.position = "right")
+
+# Combine the plots with patchwork
+combined_plot <- (gCAR + gFE + gGP) + 
+  plot_layout(ncol = 1, guides = "collect") 
+
+png('images/baseweights.png', width = 1400, height = 2200, res = 200)
+print(combined_plot)
 dev.off()
 
 # adjacency_lines <- data.frame()
