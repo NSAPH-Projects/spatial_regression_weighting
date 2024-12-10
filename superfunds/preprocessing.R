@@ -3,12 +3,16 @@ library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(sf)
+library(sp)
 library(spdep)
 library(gridExtra)
 library(tidyverse)
 library(arcpullr)
 library(stringr)
 library(matrixStats)
+library(gstat)
+library(geosphere)
+library(Matrix)
 
 setwd('/Users/sophie/Documents/implied_weights/superfunds/')
 
@@ -42,10 +46,12 @@ data <- data %>%
 data$Deletion_Date <- as.Date(data$Deletion_Date, format = '%m/%d/%Y')
 # Subset to the 1611 superfund sites that were not cleaned up before 2000
 data <- data %>% 
-  filter(Deletion_Date >= '2001-01-01' | is.na(Deletion_Date))
+  filter(Deletion_Date >= '2005-01-01' | is.na(Deletion_Date))
 # Treated units: superfund sites that have been cleaned up between 2001 and 2010
-data$Z <- ifelse(is.na(data$Deletion_Date) | data$Deletion_Date >= '2010-12-31', 0, 1)
-summary(data$Z) # 7% of superfund sites are treated
+data$Z <- ifelse(data$Deletion_Date <= '2014-12-31' & data$Deletion_Date >= '2005-01-01', 1, 0)
+# Turn NAs in Z to 0 (not yet treated)
+data$Z[is.na(data$Z)] <- 0
+summary(data$Z) # 6% of superfund sites are treated
 
 data_sf <- st_as_sf(data, coords = c('Longitude', 'Latitude'), crs = 4326)
 
@@ -57,15 +63,15 @@ data_sf <- data_sf[order(data_sf$cluster),] # IMPORTANT TO ORDER!
 
 sf_points_projected <- st_transform(data_sf, crs = 5070)
 
-# Create buffers with a radius of 5 kilometers (5000 meters)
-buffers <- st_buffer(sf_points_projected, dist = 5000)
+# Create buffers with a radius of 2 kilometers (2000 meters)
+buffers <- st_buffer(sf_points_projected, dist = 2000)
 
 buffers_original_crs <- st_transform(buffers, crs = st_crs(data_sf))
 # plot(buffers_original_crs['Status'],xlim = c(-80, -70), ylim = c(38, 46), 
 #      main = 'Superfund Sites with 5km Buffers')
 
 setwd('shapefiles/')
-st_write(buffers_original_crs, "buffers_5k.shp")
+st_write(buffers_original_crs, "buffers_2k.shp")
 setwd('../')
 
 #################### 2: Confounder data ###################
@@ -174,7 +180,9 @@ for (state in statefps) {
   tract_data_2000_sf3 <- rbind(tract_data_2000_sf3, state_data)
 }
 
-tract_data_2000 <- left_join(tract_data_2000_sf1, tract_data_2000_sf3, by = c("GEOID", "NAME"))
+tract_data_2000 <- left_join(tract_data_2000_sf1, 
+                             tract_data_2000_sf3, 
+                             by = c("GEOID", "NAME"))
 
 # Calculate derived variables (percentages)
 tract_data_2000 <- tract_data_2000 %>%
@@ -205,7 +213,9 @@ tract_data_2000 <- tract_data_2000 %>%
 head(tract_data_2000)
 summary(tract_data_2000)
 # Merge tract_data_2000 with all_shapefiles
-tract_data_2000 <- left_join(all_shapefiles, tract_data_2000, by = c("CTIDFP00" = "GEOID"))
+tract_data_2000 <- left_join(all_shapefiles, 
+                             tract_data_2000, 
+                             by = c("CTIDFP00" = "GEOID"))
 # change nonsensical values to NA
 tract_data_2000 <- tract_data_2000 %>% mutate(
   median_house_value = ifelse(median_house_value == 0, NA, median_house_value),
@@ -214,8 +224,8 @@ tract_data_2000 <- tract_data_2000 %>% mutate(
 )
 save(tract_data_2000, file = 'data/tract_data_2000.RData') # 65443 tracts. 
 
-# Read in 5k superfund buffers
-buffers <- st_read('shapefiles/buffers_5k.shp')
+# Read in 2k superfund buffers
+buffers <- st_read('shapefiles/buffers_2k.shp')
 
 projected_crs <- 5070
 
@@ -315,6 +325,7 @@ buffers <- buffers %>% select(S_EPA_I,
 buffers <- buffers[!is.na(buffers$percent_hispanic),] # 1584
 # Order by cluster
 buffers <- buffers[order(buffers$cluster),]
+buffers <- na.omit(buffers) # one median house value missing
 
 # 4: Calculate distance matrix and adjacency matrix
 dmat <- distm(cbind(buffers$Longitd, buffers$Latitud), fun = distHaversine)
@@ -361,3 +372,165 @@ clusters <- buffers$cluster
 # Save preprocessed data. 
 save(X, Z, dmat, clusters, adjacency_matrix, buffers, file = 'data/preprocessed_superfunds.RData')
 
+########### Import TEMPORARY county-level outcome #############
+bw <- read.csv('/Users/sophie/Downloads/verylow_birthweight/data_130422.csv')
+bw$CountyFIPS <- str_pad(bw$CountyFIPS, 5, pad = '0')
+bw$Value <- ifelse(bw$Value == 'Suppressed', NA, bw$Value)
+bw$Value <- ifelse(bw$Value == 'No Events', 0, bw$Value)
+bw$Value <- as.numeric(gsub('%', '', bw$Value)) # 25 percent missingness
+bw_2015_2019 <- subset(bw, Start.Year == 2015)
+bw_2000_2004 <- subset(bw, Start.Year == 2000)
+bw <- merge(bw_2015_2019, bw_2000_2004, by = 'CountyFIPS', suffixes = c('_2015_2019', '_2000_2004'))
+bw$Value <- bw$Value_2015_2019 - bw$Value_2000_2004
+mean(bw$CountyFIPS %in% counties$GEOID) # 0.999
+bw_counties <- left_join(counties, bw, by = c('GEOID' = 'CountyFIPS'))
+png('images/percent_low_bw.png', width = 1000, height = 1500, res = 120)
+g1 <- ggplot() +
+  geom_sf(data = bw_counties, aes(fill = Value_2015_2019), color = NA) +
+  xlim(-125, -60) +
+  ylim(24, 50) +
+  labs(fill = '% Very Low Birthweight') +
+  ggtitle('Very Low Birthweight by County, 2015-2029') +
+  scale_fill_viridis_c() +
+  theme_minimal() + 
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5)
+  )
+g2 <- ggplot() +
+  geom_sf(data = bw_counties, aes(fill = Value_2000_2004), color = NA) +
+  xlim(-125, -60) +
+  ylim(24, 50) +
+  labs(fill = '% Very Low Birthweight') +
+  ggtitle('Very Low Birthweight by County, 2000-2004') +
+  scale_fill_viridis_c() +
+  theme_minimal() + 
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5)
+  )
+g3 <- ggplot() +
+  geom_sf(data = bw_counties, aes(fill = Value), color = NA) +
+  xlim(-125, -60) +
+  ylim(24, 50) +
+  labs(fill = 'Change in % Very Low BW') +
+  ggtitle('Change in Very Low Birthweight by County, 2015-2019 vs 2000-2004') +
+  scale_fill_gradient2(low = 'blue', mid = 'lightyellow', high = 'red', midpoint = 0) +
+  theme_minimal() + 
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5)
+  )
+grid.arrange(g1, g2, g3, ncol = 1)
+dev.off()
+
+load('data/preprocessed_superfunds.RData')
+# For each buffer, assign to it a Y value that is average percent low bw
+bw_counties <- st_transform(bw_counties, st_crs(buffers))
+intersected_counties <- st_intersection(buffers, bw_counties)
+# Add area of intersection
+intersected_counties$area <- st_area(intersected_counties)
+intersected_counties$area <- as.numeric(intersected_counties$area)
+buffers_outcome <- intersected_counties %>% 
+  group_by(S_EPA_I) %>% # compute weighted mean
+  summarise(Y = weighted.mean(Value, w = area, na.rm = T))
+summary(buffers_outcome$Y)
+# Merge with buffers
+buffers <- left_join(buffers, st_drop_geometry(buffers_outcome %>% select(S_EPA_I, 
+                                                                          Y)), by = c('S_EPA_I' = 'S_EPA_I'))
+# Remove any rows with NA in buffers
+buffers <- na.omit(buffers)
+model_bw <- lm(Y ~ Z + log(population_density) + 
+              percent_hispanic +
+              percent_black +
+              percent_indigenous +
+              percent_asian +
+              log(median_household_income) + 
+              log(median_house_value) + 
+              percent_poverty + 
+              percent_high_school_grad,
+            data = buffers)
+summary(model_bw)
+model_bw$coefficients['Z']/mean(buffers$Y, na.rm = T) 
+# Interpretation IF significant : there is a 25 percent additional decrease in percent extremely low birthweights
+# For treated sites compared to untreated sites
+
+# Compute Moran's I of residuals
+residuals <- residuals(model_bw)
+# Inverse Distance based weights
+coords <- cbind(buffers$Latitud, buffers$Longitd)
+dmat <- distm(cbind(buffers$Longitd, buffers$Latitud), fun = distHaversine)
+# Avoid division by zero by adding a small constant to zero distances
+distance_weights <- 1/dmat
+diag(distance_weights) <- 0
+distance_weights_listw <- mat2listw(distance_weights, style = 'W', zero.policy = T)
+# Moran test
+moran.test(residuals, distance_weights_listw) # suggests weak but significant positive spatial autocorrelation
+
+# 1. Compute the Haversine distance matrix
+# Assuming buffers contains longitude ('Longitd') and latitude ('Latitud')
+dmat <- distm(cbind(buffers$Longitd, buffers$Latitud), fun = distHaversine)
+
+# 2. Define bins up to 500,000 meters (500 km) with a 50,000-meter (50 km) bin width
+bin_width <- 10000  # 50 km
+distance_bins <- seq(0, 500000, by = bin_width)
+
+# 3. Compute semivariance for each bin
+semivariance <- sapply(1:(length(distance_bins) - 1), function(k) {
+  # Get pairs in the current bin
+  lower_bound <- distance_bins[k]
+  upper_bound <- distance_bins[k + 1]
+  in_bin <- (dmat >= lower_bound & dmat < upper_bound)
+  
+  # Extract residual pairs
+  residual_pairs <- outer(residuals, residuals, `-`)[in_bin]
+  
+  # Compute semivariance
+  if (length(residual_pairs) > 0) {
+    return(mean(residual_pairs^2) / 2)
+  } else {
+    return(NA)  # No pairs in this bin
+  }
+})
+
+# 4. Calculate midpoints of bins for plotting
+bin_midpoints <- (distance_bins[-1] + distance_bins[-length(distance_bins)]) / 2
+
+# 5. Plot the semivariogram
+# plot(bin_midpoints / 1000, semivariance, pch = 16, 
+#      xlab = "Distance (km)", ylab = "Semivariance", 
+#      main = "Semivariogram of Residuals (0–500 km)", type = 'l')
+
+
+# Create a data frame for ggplot2
+semivariogram_df <- data.frame(
+  Distance_km = bin_midpoints / 1000,  # Convert meters to kilometers
+  Semivariance = semivariance
+)
+
+png('images/semivariogram.png', width = 1000, height = 600, res = 150)
+# Plot using ggplot2
+ggplot(semivariogram_df, aes(x = Distance_km, y = Semivariance)) +
+  geom_point(size = 3) +  # Points for each semivariance
+  geom_line(linewidth = 1) +   # Line connecting the points
+  labs(
+    title = "Semivariogram of Residuals (0–500 km)",
+    x = "Distance (km)",
+    y = "Semivariance"
+  ) +
+  theme_minimal() +  # Clean theme
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10)
+  )
+dev.off()
