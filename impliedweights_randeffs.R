@@ -646,14 +646,22 @@ givenbalance_getsig2gam <- function(sig2eps=1,
 computebaseweights <- function(Siginv, Z){
   #Siginv is the inverse of the covariance matrix of errors
   #Z is the n x 1 matrix of treatment
-  if (length(unique(Z)) == 2){
-    num = (2*Z-1) * (Siginv %*% (2*Z-1))
-    denom = t(Z) %*% Siginv %*% (2*Z-1)
-  }
-  else{
-    num = Siginv %*% Z
-    denom = t(Z) %*% Siginv %*% Z
-  }
+  # if (length(unique(Z)) == 2){
+  #   num = (2*Z-1) * (Siginv %*% (2*Z-1))
+  #   denom = t(Z) %*% Siginv %*% (2*Z-1)
+  # }
+  
+  #if (length(unique(Z)) == 2){
+    nt = sum(Z)
+    n = length(Z)
+    b = -nt/n
+    num = (2*Z-1) * (Siginv %*% (Z + b))
+    denom = t(Z) %*% Siginv %*% (Z + b)
+  #}
+  # else{
+  #   num = Siginv %*% Z
+  #   denom = t(Z) %*% Siginv %*% Z
+  # }
   return(as.numeric(num/as.numeric(denom)))
 }
 
@@ -711,8 +719,8 @@ compute_allbaseweights <- function(Z,
                                              Z = Z)
   
   # Gaussian Process
-  kappa = 0.2
-  rangec = 40
+  kappa = 0.05 # 0.2 # as you increase, becomes more extreme
+  rangec = 300
   phic <- rangec/(2*sqrt(kappa))
   Sigma <- geoR::matern(u = dmat, phi = phic, kappa = kappa)
   Sigmainv <- solve(Sigma)
