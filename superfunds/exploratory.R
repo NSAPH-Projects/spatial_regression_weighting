@@ -13,6 +13,7 @@ library(patchwork)
 library(rlang)
 library(xtable)
 library(tools)
+library(ggnewscale)
 
 setwd('/Users/sophie/Documents/implied_weights/superfunds/')
 
@@ -38,7 +39,7 @@ ggplot() +
   geom_sf(data = buffer_centroids_ordered, aes(color = factor(Z), shape = factor(Z)), size = 3) +
   coord_sf(xlim = c(-125, -65), ylim = c(25, 50), expand = FALSE) +
   labs(
-    title = "Superfund Sites that were cleaned up and removed from the National Priority List between 2001 and 2010",
+    title = "Superfund Sites that were cleaned up and removed from the National Priority List between 2005 and 2014",
     x = "Longitude",
     y = "Latitude"
   ) +
@@ -114,7 +115,7 @@ load('data/preprocessed_superfunds.RData')
 all_baseweights <- compute_allbaseweights(Z = Z, adjacency_matrix = adjacency_matrix,
                                           statefactor = clusters,
                                           sig2gam = 0.01,
-                                          phi = 0.99,
+                                          phi = 0.4,
                                           distmat = dmat/10000)
 # Check all base weights sum to 1 in each treatment group
 sum(all_baseweights$basePooled[Z == 1])
@@ -130,8 +131,11 @@ sum(all_baseweights$baseGP[Z == 0])
 sum(all_baseweights$baseSAR[Z == 1])
 sum(all_baseweights$baseSAR[Z == 0])
 
-allmin <- min(c(all_baseweights$baseCAR, all_baseweights$baseFE, all_baseweights$baseGP))
-allmax <- max(c(all_baseweights$baseCAR, all_baseweights$baseFE, all_baseweights$baseGP))
+allmint <- min(0,min(c(all_baseweights$baseCAR[Z == 1], all_baseweights$baseFE[Z == 1], all_baseweights$baseGP[Z == 1])))
+allmaxt <- max(c(all_baseweights$baseCAR[Z == 1], all_baseweights$baseFE[Z == 1], all_baseweights$baseGP[Z == 1]))
+allminc <- min(0,min(c(all_baseweights$baseCAR[Z == 0], all_baseweights$baseFE[Z == 0], all_baseweights$baseGP[Z == 0])))
+allmaxc <- max(c(all_baseweights$baseCAR[Z == 0], all_baseweights$baseFE[Z == 0], all_baseweights$baseGP[Z == 0]))
+
 # Merge the base weights with the data
 buffer_centroids <- st_centroid(buffers)
 buffers_merged <- cbind(buffer_centroids, all_baseweights)
@@ -139,15 +143,27 @@ buffers_merged <- cbind(buffer_centroids, all_baseweights)
 # Plot baseCAR
 buffers_merged <- buffers_merged[order(buffers_merged$baseCAR),]
 gCAR <- ggplot() +
-  geom_sf(data = states, fill = NA, color = "black", linetype = "solid") +
-  geom_sf(data = buffers_merged, aes(color = baseCAR, shape = factor(Z)), size = 2) +
+  geom_sf(data = states, fill = "black", color = "white", linetype = "solid") +
+  geom_sf(data = buffers_merged[buffers_merged$Z == 0,], aes(color = baseCAR, shape = 'Control'), size = 1.5) +
+  labs(
+    shape = "Treatment",
+    color = "Base weights (control)"
+  ) +
+  scale_color_gradient2(
+    low = "green", mid = "white", high = "red", midpoint = 0, 
+    limits = c(allminc, allmaxc)) + #limits = c(0, max(buffers_merged$baseCAR[buffers_merged$Z == 0]))) + 
+  new_scale_color() +
+  geom_sf(data = buffers_merged[buffers_merged$Z == 1,], aes(color = baseCAR, shape = 'Treated'), size = 1.5) +
+  scale_color_gradient2(
+    low = "red", mid = "white", high = "green", midpoint = 0, 
+    limits = c(allmint, allmaxt)) + #c(0, max(buffers_merged$baseCAR[buffers_merged$Z == 1]))) + 
   coord_sf(xlim = c(-125, -65), ylim = c(25, 50), expand = FALSE) +
   labs(
-    title = "CAR",
+    title = "Conditional Autoregressive",
     x = "Longitude",
     y = "Latitude",
     shape = "Treatment",
-    color = "Base weights"
+    color = "Base weights (treated)"
   ) +
   theme_minimal() +
   theme(
@@ -155,23 +171,34 @@ gCAR <- ggplot() +
     axis.text = element_blank(),
     axis.ticks = element_blank(),
     axis.title = element_blank(),
-    plot.title = element_text(hjust = 0.5)
-  ) +
-  scale_color_gradient2(
-    low = "red", mid = "lightyellow", high = "blue", midpoint = 0, limits = c(allmin, allmax))
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "bottom"
+  )
 
 # Plot base FE
 buffers_merged <- buffers_merged[order(buffers_merged$baseFE),]
-gFE <- ggplot() +
-  geom_sf(data = states, fill = NA, color = "black", linetype = "solid") +
-  geom_sf(data = buffers_merged, aes(color = baseFE, shape = factor(Z)), size = 2) +
+gRE <- ggplot() +
+  geom_sf(data = states, fill = "black", color = "white", linetype = "solid") +
+  geom_sf(data = buffers_merged[buffers_merged$Z == 0,], aes(color = baseFE, shape = 'Control'), size = 1.5) +
+  labs(
+    shape = "Treatment",
+    color = "Base weights (control)"
+  ) +
+  scale_color_gradient2(
+    low = "green", mid = "white", high = "red", midpoint = 0, 
+    limits = c(allminc, allmaxc)) + #limits = c(0, max(buffers_merged$baseFE[buffers_merged$Z == 0]))) + 
+  new_scale_color() +
+  geom_sf(data = buffers_merged[buffers_merged$Z == 1,], aes(color = baseFE, shape = 'Treated'), size = 1.5) +
+  scale_color_gradient2(
+    low = "red", mid = "white", high = "green", midpoint = 0, 
+    limits = c(allmint, allmaxt)) + #limits = c(0, max(buffers_merged$baseFE[buffers_merged$Z == 1]))) + 
   coord_sf(xlim = c(-125, -65), ylim = c(25, 50), expand = FALSE) +
   labs(
-    title = "FE",
+    title = "Random Effects",
     x = "Longitude",
     y = "Latitude",
     shape = "Treatment",
-    color = "Base weights"
+    color = "Base weights (treated)"
   ) +
   theme_minimal() +
   theme(
@@ -179,23 +206,36 @@ gFE <- ggplot() +
     axis.text = element_blank(),
     axis.ticks = element_blank(),
     axis.title = element_blank(),
-    plot.title = element_text(hjust = 0.5)
-  ) +
-  scale_color_gradient2(
-    low = "red", mid = "lightyellow", high = "blue", midpoint = 0, limits = c(allmin, allmax))
+    plot.title = element_text(hjust = 0.5),
+    legend.position = 'bottom'
+  )
 
 # Plot base GP
 buffers_merged <- buffers_merged[order(buffers_merged$baseGP),]
 gGP <- ggplot() +
-  geom_sf(data = states, fill = NA, color = "black", linetype = "solid") +
-  geom_sf(data = buffers_merged, aes(color = baseGP, shape = factor(Z)), size = 2) +
+  geom_sf(data = states, fill = "black", color = "white", linetype = "solid") +
+  geom_sf(data = buffers_merged[buffers_merged$Z == 0,], aes(color = baseGP, shape = 'Control'), size = 1.5) +
+  labs(
+    shape = "Treatment",
+    color = "Base weights (control)"
+  ) +
+  scale_color_gradient2(
+    low = "green", mid = "white", high = "red", midpoint = 0, 
+    limits = c(allminc, allmaxc)) +#limits = c(0, 
+     #          max(buffers_merged$baseGP[buffers_merged$Z == 0]))) + 
+  new_scale_color() +
+  geom_sf(data = buffers_merged[buffers_merged$Z == 1,], aes(color = baseGP, shape = 'Treated'), size = 1.5) +
+  scale_color_gradient2(
+    low = "red", mid = "white", high = "green", midpoint = 0, 
+    limits = c(allmint, allmaxt)) +  #limits = c(0,
+               #max(buffers_merged$baseGP[buffers_merged$Z == 1]))) + 
   coord_sf(xlim = c(-125, -65), ylim = c(25, 50), expand = FALSE) +
   labs(
-    title = "GP",
+    title = "Gaussian Process",
     x = "Longitude",
     y = "Latitude",
     shape = "Treatment",
-    color = "Base weights"
+    color = "Base weights (treated)"
   ) +
   theme_minimal() +
   theme(
@@ -203,21 +243,21 @@ gGP <- ggplot() +
     axis.text = element_blank(),
     axis.ticks = element_blank(),
     axis.title = element_blank(),
-    plot.title = element_text(hjust = 0.5)
-  ) +
-  scale_color_gradient2(
-    low = "red", mid = "lightyellow", high = "blue", midpoint = 0, limits = c(allmin, allmax))
+    plot.title = element_text(hjust = 0.5),
+    legend.position = 'bottom'
+  )
 
 gCAR <- gCAR + theme(legend.position = "right")
-gFE <- gFE + theme(legend.position = "right")
+gRE <- gRE + theme(legend.position = "right")
 gGP <- gGP + theme(legend.position = "right")
 
 # Combine the plots with patchwork
-combined_plot <- (gCAR + gFE + gGP) + 
-  plot_layout(ncol = 1, guides = "collect") 
+combined_plot <- (gRE + gCAR + gGP) +
+  plot_layout(ncol = 1, guides = "collect")
 
-png('images/baseweights.png', width = 1400, height = 2200, res = 200)
+png('images/baseweights.png', width = 1800, height = 2200, res = 200)
 print(combined_plot)
+#grid.arrange(gRE, gCAR, gGP, ncol = 1)
 dev.off()
 
 # adjacency_lines <- data.frame()
@@ -265,11 +305,11 @@ gCARnj <- ggplot() +
     axis.title = element_blank(),
     plot.title = element_text(hjust = 0.5)
   ) +
-  scale_color_gradient2(low = "red", mid = "lightyellow", high = "blue", midpoint = 0,
+  scale_color_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0,
                         limits = c(0, 0.02))
 
 buffers_merged <- buffers_merged[order(buffers_merged$baseFE), ]
-gFEnj <- ggplot() +
+gREnj <- ggplot() +
   geom_sf(data = states, fill = NA, color = "black", linetype = "solid") +
   geom_sf(data = buffers_merged, aes(color = baseFE, shape = factor(Z)), size = 4) +
   coord_sf(xlim = c(-80, -70), ylim = c(38, 46), expand = FALSE) +
@@ -289,7 +329,7 @@ gFEnj <- ggplot() +
     plot.title = element_text(hjust = 0.5)
   ) +
   scale_color_gradient2(
-    low = "red", mid ="lightyellow", high = "blue", midpoint = 0,
+    low = "red", mid ="white", high = "blue", midpoint = 0,
     limits = c(0, 0.02))
 
 buffers_merged <- buffers_merged[order(buffers_merged$baseGP),]
@@ -313,15 +353,15 @@ gGPnj <- ggplot() +
     plot.title = element_text(hjust = 0.5)
   ) +
   scale_color_gradient2(
-    low = "red", mid = "lightyellow", high = "blue", midpoint = 0,
+    low = "red", mid = "white", high = "blue", midpoint = 0,
     limits = c(0, 0.02))
 
 gCARnj <- gCARnj + theme(legend.position = "right")
-gFEnj <- gFEnj + theme(legend.position = "right")
+gREnj <- gREnj + theme(legend.position = "right")
 gGPnj <- gGPnj + theme(legend.position = "right")
 
 # Combine the plots with patchwork
-combined_plot <- (gCARnj + gFEnj + gGPnj) + 
+combined_plot <- (gCARnj + gREnj + gGPnj) + 
   plot_layout(ncol = 3, guides = "collect") 
 
 # Save the combined plot
