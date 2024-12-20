@@ -1117,4 +1117,15 @@ abs_imbalance_coruz_size <- function(abscoruz, sizeu, sizez){
   return(res)
 }
 
+smoothness <- function(x, Sigmainv){
+  # x is the vector for which smoothness is computed
+  # Sigmainv is the precision matrix
+  # returns the smoothness
+  
+  xstd <- x - mean(x)
+  num <- as.numeric(t(xstd) %*% xstd)
+  denom <- as.numeric(t(xstd) %*% Sigmainv %*% xstd)
+  return(num/denom)
+}
+
 
