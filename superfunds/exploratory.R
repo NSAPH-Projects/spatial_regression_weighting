@@ -14,17 +14,17 @@ library(rlang)
 library(xtable)
 library(tools)
 library(ggnewscale)
+library(cowplot)
 
 setwd('/Users/sophie/Documents/implied_weights/superfunds/')
 
 source('../impliedweights_randeffs.R')
 
-setwd('/Users/sophie/Documents/implied_weights/superfunds/')
 states <- st_read('/Users/sophie/Downloads/tl_2010_us_state10/tl_2010_us_state10.shp')
 
 # Read in preprocessed data
 load('data/preprocessed_superfunds.RData')
-
+n <- nrow(buffers)
 us_outline <- ne_countries(scale = "medium", country = "United States of America", returnclass = "sf")
 
 # Plot Z on the map
@@ -260,115 +260,6 @@ print(combined_plot)
 #grid.arrange(gRE, gCAR, gGP, ncol = 1)
 dev.off()
 
-# adjacency_lines <- data.frame()
-# coordinates <- st_coordinates(buffers_merged)
-# 
-# for (i in 1:nrow(adjacency_matrix)) {
-#   for (j in 1:ncol(adjacency_matrix)) {
-#     if (adjacency_matrix[i, j] == 1 && i < j) { # Ensure each edge is only added once
-#       adjacency_lines <- rbind(
-#         adjacency_lines,
-#         data.frame(
-#           x = coordinates[i, "X"],
-#           y = coordinates[i, "Y"],
-#           xend = coordinates[j, "X"],
-#           yend = coordinates[j, "Y"]
-#         )
-#       )
-#     }
-#   }
-# }
-
-# Plot with adjacency lines
-buffers_merged <- buffers_merged[order(buffers_merged$baseCAR), ]
-gCARnj <- ggplot() +
-  geom_sf(data = us_outline, fill = NA, color = "black", linetype = "solid") +
-  geom_sf(data = buffers_merged, aes(color = baseCAR, shape = factor(Z)), size = 4) +
-  # geom_segment(
-  #   data = adjacency_lines,
-  #   aes(x = x, y = y, xend = xend, yend = yend),
-  #   color = "gray", size = 0.5
-  # ) +
-  coord_sf(xlim = c(-80, -70), ylim = c(38, 46), expand = FALSE) +
-  labs(
-    title = "CAR",
-    x = "Longitude",
-    y = "Latitude",
-    shape = "Treatment",
-    color = "Base weights"
-  ) +
-  theme_minimal() +
-  theme(
-    panel.grid = element_blank(),
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
-    axis.title = element_blank(),
-    plot.title = element_text(hjust = 0.5)
-  ) +
-  scale_color_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0,
-                        limits = c(0, 0.02))
-
-buffers_merged <- buffers_merged[order(buffers_merged$baseFE), ]
-gREnj <- ggplot() +
-  geom_sf(data = states, fill = NA, color = "black", linetype = "solid") +
-  geom_sf(data = buffers_merged, aes(color = baseFE, shape = factor(Z)), size = 4) +
-  coord_sf(xlim = c(-80, -70), ylim = c(38, 46), expand = FALSE) +
-  labs(
-    title = "FE",
-    x = "Longitude",
-    y = "Latitude",
-    shape = "Treatment",
-    color = "Base weights"
-  ) +
-  theme_minimal() +
-  theme(
-    panel.grid = element_blank(),
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
-    axis.title = element_blank(),
-    plot.title = element_text(hjust = 0.5)
-  ) +
-  scale_color_gradient2(
-    low = "red", mid ="white", high = "blue", midpoint = 0,
-    limits = c(0, 0.02))
-
-buffers_merged <- buffers_merged[order(buffers_merged$baseGP),]
-gGPnj <- ggplot() +
-  geom_sf(data = us_outline, fill = NA, color = "black", linetype = "solid") + # add states outline
-  geom_sf(data = buffers_merged, aes(color = baseGP, shape = factor(Z)), size = 4) +
-  coord_sf(xlim = c(-80, -70), ylim = c(38, 46), expand = FALSE) +
-  labs(
-    title = "GP",
-    x = "Longitude",
-    y = "Latitude",
-    shape = "Treatment",
-    color = "Base weights"
-  ) +
-  theme_minimal() +
-  theme(
-    panel.grid = element_blank(),
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
-    axis.title = element_blank(),
-    plot.title = element_text(hjust = 0.5)
-  ) +
-  scale_color_gradient2(
-    low = "red", mid = "white", high = "blue", midpoint = 0,
-    limits = c(0, 0.02))
-
-gCARnj <- gCARnj + theme(legend.position = "right")
-gREnj <- gREnj + theme(legend.position = "right")
-gGPnj <- gGPnj + theme(legend.position = "right")
-
-# Combine the plots with patchwork
-combined_plot <- (gCARnj + gREnj + gGPnj) + 
-  plot_layout(ncol = 3, guides = "collect") 
-
-# Save the combined plot
-png('images/plot_nj.png', width = 2000, height = 800, res = 150)
-print(combined_plot)
-dev.off()
-
 # Create Data Characteristics Table
 # Data characteristics Table
 covs <- X[,-c(1,12)]
@@ -387,5 +278,3 @@ xtable_summary <- xtable(summary_table, caption = "Characteristics of the Data")
 # Print the table with options for formatting
 print(xtable_summary, type = "latex", caption.placement = "top", digits = 3)
 mean(Z)
-
-
