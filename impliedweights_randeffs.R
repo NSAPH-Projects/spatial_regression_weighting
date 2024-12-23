@@ -665,6 +665,43 @@ computebaseweights <- function(Siginv, Z){
   return(as.numeric(num/as.numeric(denom)))
 }
 
+compute_allSigmainv <- function(adjacency_matrix,
+                                statefactor,
+                                sig2gam, 
+                                sig2eps,
+                                phi,
+                                distmat){
+  n = nrow(adjacency_matrix)
+  Sigmainvs <- list()
+  
+  # Pooled
+  Sigmainvs$Pooled = diag(n)
+  
+  # CAR
+  Sigmainvs$CAR = diag(rowSums(adjacency_matrix)) - phi*adjacency_matrix
+  
+  # SAR
+  Sigmainvs$SAR = (diag(1,n) - phi*diag(1/rowSums(adjacency_matrix)) %*% adjacency_matrix) %*%
+    diag(rowSums(adjacency_matrix)) %*%
+    (diag(1,n) - phi*diag(1/rowSums(adjacency_matrix)) %*% adjacency_matrix)
+  
+  # RE
+  Sigs = list()
+  for (k in unique(statefactor)){
+    nk = sum(statefactor == k)
+    Sigs[[length(Sigs) + 1]] = diag(nk) - (sig2gam/(nk*sig2gam + sig2eps))*matrix(1, nrow = nk, ncol = nk)
+  }
+  Sigmainvs$RE = bdiag(Sigs)
+  
+  # GP
+  kappa = 0.05 # 0.2 # as you increase, becomes more extreme
+  rangec = 300
+  phic <- rangec/(2*sqrt(kappa))
+  Sigma <- geoR::matern(u = dmat, phi = phic, kappa = kappa)
+  Sigmainvs$GP <- solve(Sigma)
+  
+  return(Sigmainvs)
+}
 compute_allbaseweights <- function(Z, 
                                    adjacency_matrix, 
                                    statefactor,
@@ -1122,9 +1159,11 @@ smoothness <- function(x, Sigmainv){
   # Sigmainv is the precision matrix
   # returns the smoothness
   
+  n <- 1#length(x)
+  W <- 1#sum(Sigmainv)
   xstd <- x - mean(x)
-  num <- as.numeric(t(xstd) %*% xstd)
-  denom <- as.numeric(t(xstd) %*% Sigmainv %*% xstd)
+  num <- W*as.numeric(t(xstd) %*% xstd)
+  denom <- n*as.numeric(t(xstd) %*% Sigmainv %*% xstd)
   return(num/denom)
 }
 
