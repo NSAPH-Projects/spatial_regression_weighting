@@ -1,16 +1,13 @@
-# Implied Weights of Spatial Regression
+# Understanding Spatial Regression Models from a Weighting Perspective in an Observational Study of the Impact of Superfund Cleanups on Birth Weight
 
-## Instructions for Running Shiny App
+This repository contains the code for the simulation and data application sections of the paper. The workflow is:
 
-Ensure you have R and the Shiny package installed. You can install and load Shiny using the following command in R:
+- `funcs.R` contains all utility functions for the simulation and data applicaton. 
+- `simulation` contains the code for the simulation section of the paper. The simulation is fully reproducible. 
+- `application` contains the code for the data application section of the paper. 
 
-```R
-install.packages("shiny")
-library(shiny)
-```
+### Acknowledgements
+The computations in this paper were run on the FASRC cluster supported by the FAS Division of Science Research Computing Group at Harvard University. 
 
-To run my Shiny app, use the following command in R:
-
-```R
-runapp("my_app")
-```
+### Contact us
+If you have any questions, please contact us at [swoodward@g.harvard.edu](mailto:swoodward@g.harvard.edu).

@@ -27,15 +27,14 @@
 # Data
 *.rds
 *.csv
+*.xlsx
 
 # htmls
 *.html
 
 # Folders
 *archived/*
-images/*
+*images/*
 frames/*
-sdwa_health_violations/*
-lead_service_lines/*
-superfunds/data/*
-superfunds/shapefiles/*
+data/*
+shapefiles/*
