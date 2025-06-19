@@ -96,9 +96,12 @@ fit_method <- function(Y,
                        Sigmainvcar = NULL,
                        Sigmainvgp = NULL,
                        tols = NULL,
-                       Xtol = 0.1,
-                       method = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW'),
-                       neigen = 50) {
+                       Xtol = 0,
+                       method = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW', 'spatialcoord'),
+                       neigen = 50,
+                       lat = NULL,
+                       long = NULL,
+                       boot = F) {
   
   # Y is the outcome vector
   # X is the design matrix including intercept
@@ -122,22 +125,62 @@ fit_method <- function(Y,
     # print(typeof(X))
     # print(typeof(Z))
     ols_model <- lm(Y ~ X + Z)
-    return(coefficients(ols_model)['Z'])
+    if (boot){
+      ests <- boot_func(Y=Y, X=X, Z=Z, 
+                        Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
+                        Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
+                        lat = lat, long = long,
+       tols = tols, method = method, neigen = neigen)
+      boot_sd <- sd(ests)
+      return(list('est' = coefficients(ols_model)['Z'], 'boot_sd' = boot_sd))
+    }
+    return(list('est' = coefficients(ols_model)['Z']))
   }
   
   if ('RE' == method) {
     stopifnot(!is.null(Sigmainvre))
-    return((solve(t(design) %*% Sigmainvre %*% design) %*% t(design) %*% Sigmainvre %*% Y)['Z',] )
+    if (boot){
+      ests <- boot_func(Y=Y, X=X, Z=Z, 
+                        Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
+                        lat = lat, long = long,
+                        Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
+       tols = tols, method = method, neigen = neigen)
+      boot_sd <- sd(ests)
+      return(list('est' = (solve(t(design) %*% Sigmainvre %*% design) %*% t(design) %*% Sigmainvre %*% Y)['Z',], 
+                  'boot_sd' = boot_sd))
+    }
+    return(list('est' = (solve(t(design) %*% Sigmainvre %*% design) %*% t(design) %*% Sigmainvre %*% Y)['Z',]))
   }
   
   if ('CAR'  == method) {
     stopifnot(!is.null(Sigmainvcar))
-    return((solve(t(design) %*% Sigmainvcar %*% design) %*% t(design) %*% Sigmainvcar %*% Y)['Z',])
+    if (boot){
+      ests <- boot_func(Y=Y, X=X, Z=Z, 
+                        Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
+                        lat = lat, long = long,
+                        Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
+       tols = tols, method = method, neigen = neigen)
+      boot_sd <- sd(ests)
+      return(list('est' = (solve(t(design) %*% Sigmainvcar %*% design) %*% t(design) %*% Sigmainvcar %*% Y)['Z',], 
+                  'boot_sd' = boot_sd))
+    }
+    return(list('est' = (solve(t(design) %*% Sigmainvcar %*% design) %*% t(design) %*% Sigmainvcar %*% Y)['Z',]))
   }
   
   if ('GP'  == method) {
     stopifnot(!is.null(Sigmainvgp))
-    return((solve(t(design) %*% Sigmainvgp %*% design) %*% t(design) %*% Sigmainvgp %*% Y)['Z',])
+    if (boot){
+      ests <- boot_func(Y=Y, X=X, Z=Z, 
+                        Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
+                        lat = lat, long = long,
+                        Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
+       tols = tols, method = method, neigen = neigen)
+      print(summary(ests))
+      boot_sd <- sd(ests)
+      return(list('est' = (solve(t(design) %*% Sigmainvgp %*% design) %*% t(design) %*% Sigmainvgp %*% Y)['Z',], 
+                  'boot_sd' = boot_sd))
+    }
+    return(list('est' = (solve(t(design) %*% Sigmainvgp %*% design) %*% t(design) %*% Sigmainvgp %*% Y)['Z',]))
   }
   
   if ('SW'  == method) {
@@ -146,7 +189,10 @@ fit_method <- function(Y,
     stopifnot(!is.null(Vgp))
     stopifnot(!is.null(tols))
     t_ind <- Z
-    bal_cov <- cbind.data.frame(X,Vre[,1:neigen],Vcar[,1:neigen],Vgp[,1:neigen])
+    bal_cov <- cbind.data.frame(X,
+                                Vre[,1:neigen],
+                                Vcar[,1:neigen],
+                                Vgp[,1:neigen])
     # D <- model.matrix(~ 0 + X*V, data = bal_cov)  # this gives columns X, V, and X:V
     # # do a QR decomposition
     # qrD <- qr(D)
@@ -161,20 +207,35 @@ fit_method <- function(Y,
     bal <- list()
     #bal$bal_gri <- c(1e-4, 1e-3) # grid of tuning parameters 
     bal$bal_cov <- colnames(bal_cov)[-1]
-    #bal$bal_alg = T # tuning algorithm in Wang and Zubizarreta (2020) used for automatically selecting the degree of approximate covariates balance.
-    #bal$bal_sam = 1000
+    # bal$bal_alg = T # tuning algorithm in Wang and Zubizarreta (2020) used for automatically selecting the degree of approximate covariates balance.
+    # bal$bal_sam = 1000
     bal$bal_std <- 'manual'
     bal$bal_alg <- F
-    bal$bal_tol <- c(rep(Xtol, ncol(X)-1), tols$RE[1:neigen], 
+    bal$bal_tol <- c(rep(Xtol, ncol(X)-1), tols$RE[1:neigen],
                      tols$CAR[1:neigen], tols$GP[1:neigen])
     #print(bal$bal_tol)
     stopifnot(length(bal$bal_tol) == length(bal$bal_cov))
     sbwatttun_object = sbw(dat = data_frame, ind = t_ind, bal = bal, 
                            sol = list(sol_nam = "quadprog"), 
                            par = list(par_est = "att", par_tar = NULL))
-    
-    return(sum(sbwatttun_object$dat_weights$sbw_weights[Z == 1]*Y[Z == 1]) - 
-             sum(sbwatttun_object$dat_weights$sbw_weights[Z == 0]*Y[Z == 0]) )
+    if (boot){
+      ests <- boot_func(Y=Y, X=X, Z=Z, 
+                        Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
+                        Sigmainvre = Sigmainvre, 
+                        Sigmainvcar = Sigmainvcar, 
+                        Sigmainvgp = Sigmainvgp,
+                        lat = lat,
+                        long = long,
+       tols = tols, method = method, neigen = neigen)
+      boot_sd <- sd(ests)
+      return(list('est' = sum(sbwatttun_object$dat_weights$sbw_weights[Z == 1]*Y[Z == 1]) - 
+             sum(sbwatttun_object$dat_weights$sbw_weights[Z == 0]*Y[Z == 0]),
+             'weights' = sbwatttun_object$dat_weights$sbw_weights,
+             'boot_sd' = boot_sd))
+    }
+    return(list('est' = sum(sbwatttun_object$dat_weights$sbw_weights[Z == 1]*Y[Z == 1]) - 
+             sum(sbwatttun_object$dat_weights$sbw_weights[Z == 0]*Y[Z == 0]), 
+             'weights' = sbwatttun_object$dat_weights$sbw_weights))
   }
   
   if ('UW'  == method) {
@@ -195,6 +256,39 @@ fit_method <- function(Y,
     return(sum(sbwatttun_object$dat_weights$sbw_weights[Z == 1]*Y[Z == 1]) - 
              sum(sbwatttun_object$dat_weights$sbw_weights[Z == 0]*Y[Z == 0]))
   }
+  
+  if ('spatialcoord' == method){
+    outcomemod0 <- SuperLearner::SuperLearner(Y = Y[Z == 0], 
+                                             X = cbind.data.frame(X[Z == 0,], 
+                                                                  lat = lat[Z == 0], 
+                                                                  long = long[Z == 0]),
+                                             SL.library = c("SL.earth", 
+                                                            "SL.gam", 
+                                                            "SL.glm", 
+                                                            "SL.glm.interaction", 
+                                                            "SL.mean"),
+                                             newX = cbind.data.frame(X, lat, long))
+    pimod <- SuperLearner::SuperLearner(Y = Z, 
+                                        X = cbind.data.frame(X, lat, long),
+                                        SL.library = c("SL.earth", "SL.gam", "SL.glm", "SL.glm.interaction", "SL.mean"),
+                                        family = binomial())
+    # estimate the ATT 
+    predY <- outcomemod0$SL.predict
+    predpi <- pimod$SL.predict
+    tauhat <- (sum(Y*Z - (Y*(1-Z)*predpi + predY*(Z-predpi))/(1-predpi)))/sum(Z)
+    
+    if (boot){
+      ests <- boot_func(Y=Y, X=X, Z=Z, 
+                        Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
+                        lat = lat, long = long,
+                        Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
+                        tols = tols, method = method, neigen = neigen)
+      boot_sd <- sd(ests)
+      return(list('est' = tauhat, 
+                  'boot_sd' = boot_sd))
+    }
+    return(list('est' = tauhat))
+  }
 }
 
 simfunc <- function(nsims = 1000,
@@ -214,9 +308,11 @@ simfunc <- function(nsims = 1000,
                     Ecar = NULL,
                     Vgp = NULL,
                     Egp = NULL,
+                    lat = NULL,
+                    long = NULL,
                     smoothing = c('clusterbased', 'adjacencybased', 'distancebased'),
                     outcomemod = c('linear', 'linearinteraction', 'nonlinearinteraction'),
-                    methods = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW')) {
+                    methods = c('spatialcoord')) { # 'OLS', 'RE', 'CAR', 'GP', 'SW', 'UW', 
   # nsims is the number of simulations
   # X is the design matrix including intercept
   # Z is the binary treatment vector
@@ -285,7 +381,9 @@ simfunc <- function(nsims = 1000,
         Sigmainvre = Sigmainvre,
         Sigmainvcar = Sigmainvcar,
         Sigmainvgp = Sigmainvgp,
-        method = method
+        method = method,
+        lat = lat,
+        long = long
       )
       
     }
@@ -409,7 +507,7 @@ calculate_optimal_tolerances <- function(X,
 boot_func <- function(Y,
                       X,
                       Z,
-                      bootreps = 1000,
+                      bootreps = 100,
                       Vre = NULL,
                       Vcar = NULL,
                       Vgp = NULL,
@@ -417,7 +515,9 @@ boot_func <- function(Y,
                       Sigmainvcar = NULL,
                       Sigmainvgp = NULL,
                       tols = NULL,
-                      method = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW'),
+                      lat = NULL,
+                      long = NULL,
+                      method = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW', 'spatialcoord'),
                       neigen = 50){
   method <- match.arg(method)
   n <- length(Y)
@@ -451,7 +551,9 @@ boot_func <- function(Y,
                  Sigmainvgp  = Sigmainvgpb,
                  tols        = tols,
                  method      = method,
-                 neigen      = neigen)
+                 lat         = lat,
+                 long        = long,
+                 neigen      = neigen)$est
     }, error = function(e) {
       warning(sprintf("bootstrap sample %d failed: %s — skipping", b, e$message))
       NULL
@@ -468,3 +570,81 @@ boot_func <- function(Y,
   return(atts)
 }
 
+compute_ess <- function(w){
+  # w is the n x 1 matrix of weights
+  # returns the effective sample size
+  
+  return(sum(abs(w))^2/sum(w^2))
+}
+
+compute_dispersion <- function(w){
+  # w is the n x 1 matrix of weights
+  # returns the dispersion
+  
+  return(1/sum(w^2))
+}
+
+# returns a nice data frame with balance
+balance_table <- function(w, X, Z){
+  # make sure Z is binary
+  stopifnot(length(unique(Z)) == 2)
+  stopifnot(nrow(X) == length(Z))
+  stopifnot(length(Z) == length(w))
+  
+  covnames <- colnames(X)
+  df <- data.frame('covnames' = covnames,
+                  'control_bw' = rep(NA, length(covnames)),
+                   'control_aw' = rep(NA, length(covnames)),
+                   'treated' = rep(NA, length(covnames)))
+  for(i in seq_along(covnames)){
+    df[i, 'control_bw'] <- mean(X[Z == 0, i])
+    df[i, 'control_aw'] <- sum(X[Z == 0, i] * w[Z == 0]) / sum(w[Z == 0])
+    df[i, 'treated']     <- sum(X[Z == 1, i] * w[Z == 1]) / sum(w[Z == 1]) # should be the same as before weighting
+  }
+  return(df)
+}
+
+# sample_influence <- this function will be hard because am i recalculating the covariance matrices?
+# Or just taking out the ith row and ith column? unclear
+# sample_influence <- function(Y,
+#                              X,
+#                              Z,
+#                              Vre,
+#                              Vcar,
+#                              Vgp,
+#                              Sigmainvre,
+#                              Sigmainvcar,
+#                              Sigmainvgp,
+#                              tols,
+#                              method = 'SW',
+#                              neigen = 25){
+#   ATT_overall <- fit_method(Y = Y,
+#                             X = X,
+#                             Z = Z,
+#                             Vre = Vre,
+#                             Vcar = Vcar,
+#                             Vgp = Vgp,
+#                             Sigmainvre = Sigmainvre,
+#                             Sigmainvcar = Sigmainvcar,
+#                             Sigmainvgp = Sigmainvgp,
+#                             tols = tols,
+#                             method = method,
+#                             neigen = neigen)$est
+#   sics <- rep(NA,length(Y))
+#   for (i in 1:length(Y)){
+#     ATT_minusi <- fit_method(Y = Y[-i],
+#                             X = X[-i, ],
+#                             Z = Z[-i],
+#                             Vre = Vre[-i, ],
+#                             Vcar = Vcar[-i, ],
+#                             Vgp = Vgp[-i, ],
+#                             Sigmainvre = Sigmainvre[-i, -i],
+#                             Sigmainvcar = Sigmainvcar[-i, -i],
+#                             Sigmainvgp = Sigmainvgp[-i, -i],
+#                             tols = tols,
+#                             method = method,
+#                             neigen = neigen)$est
+#     sics[i] <- (ATT_overall - ATT_minusi)/(length(Y)-1)
+#   }
+#   return(sics)
+# }

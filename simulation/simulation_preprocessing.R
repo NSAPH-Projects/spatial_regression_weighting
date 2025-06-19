@@ -14,6 +14,8 @@ states <- st_read('../data/tl_2010_us_state10/tl_2010_us_state10.shp')
 set.seed(1234)
 # Read in X and Z data
 load('../data/preprocessed_superfunds.RData')
+lat <- buffers$Latitud
+long <- buffers$Longitd
 n <- nrow(buffers)
 X <- st_drop_geometry(X)
 X[,2:11] <- scale(X[,2:11])
@@ -70,7 +72,9 @@ simlist <- list(
   'Sigmainvgp' = Sigmainvgp,
   'Wre' = Wre,
   'Wcar' = Wcar,
-  'Wgp' = Wgp
+  'Wgp' = Wgp,
+  'lat' = lat,
+  'long' = long
 )
 save(simlist, 
      file = 'sim.RData')

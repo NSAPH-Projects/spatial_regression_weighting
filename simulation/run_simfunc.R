@@ -3,6 +3,7 @@ source('../funcs.R')
 library(sbw)
 library(sf)
 library(MASS)
+library(SuperLearner)
 
 # Load in simulation data,
 # a list of... 
@@ -32,7 +33,9 @@ simfunc(nsims = nsims,
         Wcar = simlist$Wcar,
         Wgp = simlist$Wgp,
         smoothing = smoothing,
-        outcomemod = outcomemod
+        outcomemod = outcomemod,
+        lat = simlist$lat,
+        long = simlist$long
         )
 
 
