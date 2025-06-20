@@ -312,7 +312,7 @@ save(buffer_averages, file = 'data/buffer_averages.RData')
 buffers <- buffers %>%
   left_join(
     st_drop_geometry(buffer_averages),
-    by = c("S_EPA_I" = "Site_EPA_ID")
+    by = c("S_EPA_I")
   )
 buffers <- buffers %>% dplyr::select(S_EPA_I,
                               Z,
