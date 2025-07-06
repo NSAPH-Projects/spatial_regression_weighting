@@ -270,8 +270,11 @@ fit_method <- function(Y,
                                              newX = cbind.data.frame(X, lat, long))
     pimod <- SuperLearner::SuperLearner(Y = Z, 
                                         X = cbind.data.frame(X, lat, long),
-                                        SL.library = c("SL.earth", "SL.gam", "SL.glm", "SL.glm.interaction", "SL.mean"),
-                                        family = binomial())
+                                        SL.library = c("SL.earth",
+                                                       "SL.gam",
+                                                       "SL.glm",
+                                                       "SL.glm.interaction",
+                                                       "SL.mean"),                                         family = binomial())
     # estimate the ATT 
     predY <- outcomemod0$SL.predict
     predpi <- pimod$SL.predict
@@ -507,7 +510,7 @@ calculate_optimal_tolerances <- function(X,
 boot_func <- function(Y,
                       X,
                       Z,
-                      bootreps = 100,
+                      bootreps = 500,
                       Vre = NULL,
                       Vcar = NULL,
                       Vgp = NULL,
