@@ -7,6 +7,8 @@ library(xtable)
 library(Matrix)
 library(tidyverse)
 library(parallel)
+library(ggforce)
+library(ggh4x)
 source('../funcs.R')
 load('sim.RData')
 
@@ -86,7 +88,7 @@ analysisdf_bias <- analysisdf %>%
 # Pivot wider from the original analysisdf
 analysisdf_bias <- analysisdf_bias[, c(1:4)] %>% 
   pivot_wider(names_from = method, values_from = bias)
-analysisdf_bias <- analysisdf_bias[, c("smoothing", "outcomemod", "OLS", "RE", "CAR", "GP", "SW"
+analysisdf_bias <- analysisdf_bias[, c("smoothing", "outcomemod", "OLS", "RE", "CAR", "GP", "spatialcoord", "SW"
                                        )]
 
 # Print using xtable and prevent xtable from reformatting the already-formatted text
@@ -104,7 +106,7 @@ analysisdf_RMSE <- analysisdf %>%
 analysisdf_RMSE <- analysisdf_RMSE[, c(1:3, 5)] %>% 
   pivot_wider(names_from = method, values_from = RMSE
 )
-analysisdf_RMSE <- analysisdf_RMSE[, c("smoothing", "outcomemod", "OLS", "RE", "CAR", "GP", "SW"
+analysisdf_RMSE <- analysisdf_RMSE[, c("smoothing", "outcomemod", "OLS", "RE", "CAR", "GP", "spatialcoord", "SW"
                                        )]
 
 print(xtable(analysisdf_RMSE), include.rownames = F, sanitize.text.function = identity)
@@ -145,6 +147,7 @@ desired_order <- c("OLS",
                   "RE", 
                   "CAR", 
                   "GP", 
+                  "spatialcoord",
                   "SW"
                   )
 df$method <- factor(df$method, levels = desired_order)
@@ -202,17 +205,39 @@ ATTs2 <- ATTs %>%
     )
   )
 
+# Convert methods equal to spatialcoord to "SC"
+df2$method <- recode_factor(df$method, 'spatialcoord' = 'SC')
+desired_order <- c("OLS", 
+                   "RE", 
+                   "CAR", 
+                   "GP", 
+                   "SC",
+                   "SW"
+)
+df2$method <- factor(df2$method, levels = desired_order)
+
 png("images/boxplot.png", width = 2880, height = 2400, res = 350)
+# ggplot(df2, aes(x = method, y = estimate, fill = method)) +
+#   geom_boxplot(alpha = 0.5) +
+#   facet_grid(
+#     outcomemod ~ smoothing, 
+#     scales = "free"
+#   ) +
+#   geom_hline(data = ATTs2, aes(yintercept = tau),
+#              color = "red", linetype = "dashed", size = 1) +
+#   labs(x = NULL, 
+#        y = "Estimate of the ATT", 
+#        fill = "Method") +
+#   theme_bw() 
 ggplot(df2, aes(x = method, y = estimate, fill = method)) +
   geom_boxplot(alpha = 0.5) +
-  facet_grid(
+  ggh4x::facet_grid2(
     outcomemod ~ smoothing,
-    scales = "free_y"
+    scales = "free",           # allows different scales per row/col
+    independent = "all"        # allows different scales **per panel**
   ) +
   geom_hline(data = ATTs2, aes(yintercept = tau),
              color = "red", linetype = "dashed", size = 1) +
-  labs(x = NULL, 
-       y = "Estimate of the ATT", 
-       fill = "Method") +
-  theme_bw() 
+  labs(x = NULL, y = "Estimate of the ATT", fill = "Method") +
+  theme_bw()
 dev.off()
