@@ -39,3 +39,6 @@ frames/*
 data/*
 shapefiles/*
 application/outcome_results/*
+
+# Other files
+deletelater.R
