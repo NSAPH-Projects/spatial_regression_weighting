@@ -607,47 +607,35 @@ balance_table <- function(w, X, Z){
   return(df)
 }
 
-# sample_influence <- this function will be hard because am i recalculating the covariance matrices?
-# Or just taking out the ith row and ith column? unclear
-# sample_influence <- function(Y,
-#                              X,
-#                              Z,
-#                              Vre,
-#                              Vcar,
-#                              Vgp,
-#                              Sigmainvre,
-#                              Sigmainvcar,
-#                              Sigmainvgp,
-#                              tols,
-#                              method = 'SW',
-#                              neigen = 25){
-#   ATT_overall <- fit_method(Y = Y,
-#                             X = X,
-#                             Z = Z,
-#                             Vre = Vre,
-#                             Vcar = Vcar,
-#                             Vgp = Vgp,
-#                             Sigmainvre = Sigmainvre,
-#                             Sigmainvcar = Sigmainvcar,
-#                             Sigmainvgp = Sigmainvgp,
-#                             tols = tols,
-#                             method = method,
-#                             neigen = neigen)$est
-#   sics <- rep(NA,length(Y))
-#   for (i in 1:length(Y)){
-#     ATT_minusi <- fit_method(Y = Y[-i],
-#                             X = X[-i, ],
-#                             Z = Z[-i],
-#                             Vre = Vre[-i, ],
-#                             Vcar = Vcar[-i, ],
-#                             Vgp = Vgp[-i, ],
-#                             Sigmainvre = Sigmainvre[-i, -i],
-#                             Sigmainvcar = Sigmainvcar[-i, -i],
-#                             Sigmainvgp = Sigmainvgp[-i, -i],
-#                             tols = tols,
-#                             method = method,
-#                             neigen = neigen)$est
-#     sics[i] <- (ATT_overall - ATT_minusi)/(length(Y)-1)
-#   }
-#   return(sics)
-# }
+plot_with_insets <- function(giant_plot){
+  # giant_plot is a ggplot object with the entire US
+  # returns a ggdraw object with mainland, Alaska, and Hawaii insets
+  mainland_plot <- giant_plot + coord_sf(xlim = c(-125, -65), ylim = c(25, 50))
+  alaska_plot <- giant_plot + coord_sf(xlim = c(-180, -127), ylim = c(50, 72)) + 
+    theme(legend.position = "none", plot.title = element_blank())
+  hawaii_plot <- giant_plot + coord_sf(xlim = c(-160, -154), ylim = c(18, 25)) + 
+    theme(legend.position = "none", plot.title = element_blank())
+  g <- ggdraw(mainland_plot) +
+    draw_plot(alaska_plot, width = 0.26, height = 0.26 * 10/6 * 0.8, 
+              x = 0, y = -0.03) +
+    draw_plot(hawaii_plot, width = 0.15, height = 0.15 * 10/6 * 0.8, 
+              x = 0.2, y = 0)
+  return(g)
+}
+
+moran_adhoc <- function(x, Wmat, coeff){
+  # x is a vector of values
+  # Wmat is the spatial weights matrix
+  # coeff is normalizing coeff
+  
+  x_centered <- x - mean(x)
+  num <- sum(x_centered * (Wmat %*% x_centered))
+  denom <- sum(x_centered^2)
+  
+  moran_I <- num / denom
+  
+  # Adjust Moran's I by the coefficient
+  moran_adjusted <- moran_I * coeff
+  
+  return(moran_adjusted)
+}
