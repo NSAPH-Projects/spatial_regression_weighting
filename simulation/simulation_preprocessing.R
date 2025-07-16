@@ -90,8 +90,7 @@ buffers_merged$Ure <- as.numeric(gen_U(Z = Z,
            smoothing = 'clusterbased'
            ))
 
-png('images/Ure.png', width = 1300, height = 1000, res = 250)
-ggplot() +
+g <- ggplot() +
   geom_sf(data = states, fill = NA, color = "darkgray", linetype = "solid", size = 0.5) +
   geom_sf(data = buffers_merged, 
           aes(fill = Ure, shape = factor(Z)), size = 3, stroke = 0) +
@@ -99,22 +98,24 @@ ggplot() +
   scale_shape_manual(values = c("0" = 21, "1" = 24),
                      guide = "none") +
   # relabel the fill legend:
-  scale_fill_viridis_c(name = "U") +
+  scale_fill_viridis_c(name = "U",
+                       breaks = c(min(buffers_merged$Ure), max(buffers_merged$Ure))) +
   labs(
     x = "Longitude",
     y = "Latitude"
   ) +
   theme_minimal() +
-  coord_sf(xlim = c(-125, -65), ylim = c(25, 50)) +
   theme(
     panel.grid    = element_blank(),
     axis.text     = element_blank(),
     axis.ticks    = element_blank(),
     axis.title    = element_blank(),
     plot.title    = element_text(hjust = 0.5),
-    legend.position = "bottom",
-    legend.key.width = unit(1.5, "cm")
+    legend.position = "right",
+    legend.key.height = unit(1, "cm")
   )
+png('images/Ure.png', width = 1500, height = 1000, res = 250)
+plot_with_insets(g)
 dev.off()
 
 buffers_merged$Ucar <- as.numeric(gen_U(Z = Z, 
@@ -125,8 +126,7 @@ buffers_merged$Ucar <- as.numeric(gen_U(Z = Z,
 ))
 
 # CAR
-png('images/Ucar.png', width = 1300, height = 1000, res = 250)
-ggplot() +
+g <- ggplot() +
   geom_sf(data = states, fill = NA, color = "darkgray", linetype = "solid", size = 0.5) +
   geom_sf(data = buffers_merged, 
           aes(fill = buffers_merged$Ucar, shape = factor(Z)), size = 3, stroke = 0) +
@@ -140,16 +140,17 @@ ggplot() +
     y = "Latitude"
   ) +
   theme_minimal() +
-  coord_sf(xlim = c(-125, -65), ylim = c(25, 50)) +
   theme(
     panel.grid    = element_blank(),
     axis.text     = element_blank(),
     axis.ticks    = element_blank(),
     axis.title    = element_blank(),
     plot.title    = element_text(hjust = 0.5),
-    legend.position = "bottom",
-    legend.key.width = unit(1.5, "cm")
+    legend.position = "right",
+    legend.key.height = unit(1, "cm")
   )
+png('images/Ucar.png', width = 1500, height = 1000, res = 250)
+plot_with_insets(g)
 dev.off()
 
 # GP
@@ -159,10 +160,7 @@ buffers_merged$Ugp <- as.numeric(gen_U(Z = Z,
                             Wgp = Wgp,
                             smoothing = 'distancebased'
 ))
-# Order buffers_merged by the value of Ugp
-buffers_merged <- buffers_merged[order(buffers_merged$Ugp), ]
-png('images/Ugp.png', width = 1300, height = 1000, res = 250)
-ggplot() +
+g <- ggplot() +
   geom_sf(data = states, fill = NA, color = "darkgray", linetype = "solid", size = 0.5) +
   geom_sf(data = buffers_merged, 
           aes(fill = buffers_merged$Ugp, shape = factor(Z)), size = 3, stroke = 0) +
@@ -176,14 +174,15 @@ ggplot() +
     y = "Latitude"
   ) +
   theme_minimal() +
-  coord_sf(xlim = c(-125, -65), ylim = c(25, 50)) +
   theme(
     panel.grid    = element_blank(),
     axis.text     = element_blank(),
     axis.ticks    = element_blank(),
     axis.title    = element_blank(),
     plot.title    = element_text(hjust = 0.5),
-    legend.position = "bottom",
-    legend.key.width = unit(1.5, "cm")
+    legend.position = "right",
+    legend.key.height = unit(1, "cm")
   )
+png('images/Ugp.png', width = 1500, height = 1000, res = 250)
+plot_with_insets(g)
 dev.off()
