@@ -373,6 +373,7 @@ X <- buffers[c('Sit_Scr',
 X <- cbind.data.frame(Intercept = 1, X) # Add intercept
 # Drop geometry from X
 X <- st_drop_geometry(X)
+X <- X[,-13]
 Z <- buffers$Z
 clusters <- buffers$cluster
 # Save preprocessed data. 
