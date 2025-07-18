@@ -26,14 +26,12 @@ setwd('../') # Work in parent directory
 # url <- 'https://epa.maps.arcgis.com/home/item.html?id=c2b7cdff579c41bbba4898400aa38815'
 # https://epa.maps.arcgis.com/apps/webappviewer/index.html?id=33cebcdfdd1b4c3a8b51d416956c41f1
 url <- 'https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/Superfund_National_Priorities_List_(NPL)_Sites_with_Status_Information/FeatureServer/0'
-#url <- 'https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/Superfund_National_Priorities_List_(NPL)_Sites_with_Status_Information/FeatureServer'
-#url <- 'https://epa.maps.arcgis.com/apps/webappviewer/index.html?id=33cebcdfdd1b4c3a8b51d416956c41f1'
 data <- get_spatial_layer(url)
 
 data <- data %>% 
   dplyr::select(Site_Name, 
          Site_Score, 
-         S_EPA_I, 
+         Site_EPA_ID, 
          State, 
          City, 
          County, 
@@ -44,7 +42,7 @@ data <- data %>%
          Listing_Date,
          Construction_Completion_Date,
          Deletion_Date) # 1840
-# Subset those whose Deletion Date is NA or after 2005
+# Subset those whose Deletion Date is NA or after 2001
 # Convert Deletion Date to date
 data$Deletion_Date <- as.Date(data$Deletion_Date, format = '%m/%d/%Y')
 # Subset to the 1611 superfund sites that were not cleaned up before 2001
@@ -59,7 +57,7 @@ summary(data$Z) # 6% of superfund sites are treated
 data_sf <- st_as_sf(data, coords = c('Longitude', 'Latitude'), crs = 4326)
 
 # Perform the spatial join
-data_sf$cluster <- substr(data_sf$S_EPA_I, 1, 2)
+data_sf$cluster <- substr(data_sf$Site_EPA_ID, 1, 2)
 data_sf$cluster <- factor(data_sf$cluster)
 data_sf$cluster <- as.numeric(data_sf$cluster)
 data_sf <- data_sf[order(data_sf$cluster),] # IMPORTANT TO ORDER! 
@@ -70,12 +68,8 @@ sf_points_projected <- st_transform(data_sf, crs = 5070)
 buffers <- st_buffer(sf_points_projected, dist = 2000)
 
 buffers_original_crs <- st_transform(buffers, crs = st_crs(data_sf))
-# plot(buffers_original_crs['Status'],xlim = c(-80, -70), ylim = c(38, 46), 
-#      main = 'Superfund Sites with 5km Buffers')
 
-#setwd('shapefiles/')
 st_write(buffers_original_crs, "shapefiles/buffers_2k.shp")
-#setwd('../')
 
 #################### 2: Confounder data ###################
 #census_api_key("ff4b9c35f317b4718d387706005f65987329e82b", install = T, overwrite = T)
@@ -254,7 +248,7 @@ intersection <- intersection %>%
   mutate(
     intersect_area = as.numeric(st_area(.)), # Intersection area in square meters
     population_weight = intersect_area / tract_area, # Fraction of tract in buffer
-    weighted_population = population_weight * total_population # Weighted population
+    weighted_population = population_weight * total_population # Estimated pop if population was uniformly distributed
   ) %>%
   mutate(across(
     c(
@@ -267,7 +261,7 @@ intersection <- intersection %>%
 buffer_averages <- intersection %>%
   group_by(S_EPA_I) %>% # Group by buffer ID
   summarise(
-    total_population = sum(weighted_population, na.rm = TRUE), # Total weighted population
+    total_population = sum(weighted_population, na.rm = TRUE), # Total estimated population if uniform
     buffer_area = first(buffer_area), # Precomputed buffer area
     population_density = total_population / buffer_area, # Population density
     across(
@@ -275,7 +269,7 @@ buffer_averages <- intersection %>%
         'percent_hispanic', 'percent_black', 'percent_white', 'percent_indigenous',
         'percent_asian', 'percent_poverty', 'percent_high_school_grad'
       ),
-      ~ sum(.x, na.rm = TRUE) / sum(intersect_area, na.rm = TRUE) # Area-weighted averages
+      ~ sum(.x, na.rm = TRUE) / sum(intersect_area, na.rm = TRUE) # Area-weighted averages (previously weighted above)
     ),
     # Weighted median for median_year_built
     median_year_built = weightedMedian(
@@ -315,25 +309,28 @@ buffers <- buffers %>%
     by = c("S_EPA_I")
   )
 buffers <- buffers %>% dplyr::select(S_EPA_I,
-                              Z,
-                              cluster,
-                              Latitud,
-                              Longitd,
-                              population_density,
-                              percent_hispanic,
-                              percent_black,
-                              percent_white,
-                              percent_indigenous,
-                              percent_asian,
-                              median_household_income,
-                              median_house_value,
-                              percent_poverty,
-                              percent_high_school_grad,
-                              median_year_built)
-# Drop the rows with NA confounder values (PR, Guam, Virgin Islands)
+                                     Sit_Scr,
+                                      Z,
+                                      cluster,
+                                      Latitud,
+                                      Longitd,
+                                      population_density,
+                                      percent_hispanic,
+                                      percent_black,
+                                      percent_white,
+                                      percent_indigenous,
+                                      percent_asian,
+                                      median_household_income,
+                                      median_house_value,
+                                      percent_poverty,
+                                      percent_high_school_grad,
+                                      median_year_built)
+# Drop the rows with NA census confounder values (PR, Guam, Virgin Islands)
 buffers <- buffers[!is.na(buffers$percent_hispanic),] # 1584
 # Order by cluster
 buffers <- buffers[order(buffers$cluster),]
+# Not all buffers have Site Scores. Naively impute the 41 missing Site Scores with median
+buffers$Sit_Scr[is.na(buffers$Sit_Scr)] <- median(buffers$Sit_Scr, na.rm = TRUE)
 buffers <- na.omit(buffers) # one median house value missing
 # n = 1583
 
@@ -341,17 +338,16 @@ buffers <- na.omit(buffers) # one median house value missing
 dmat <- distm(cbind(buffers$Longitd, buffers$Latitud), fun = distHaversine)
 # Convert distances to kilometers
 dmat <- dmat / 1000
-#dmat <- dmat + diag(1e-6, nrow = nrow(dmat))
 
-# Calculate a 2 nearest neighbors matrix using dmat
+# Calculate a 5 nearest neighbors matrix using dmat
 n <- nrow(dmat)
 
-# Create an empty sparse matrix for 2-nearest neighbors
+# Create an empty sparse matrix for 5-nearest neighbors
 nn_matrix <- Matrix(0, n, n, sparse = TRUE)
 
-# Loop through each row to find 2-nearest neighbors
+# Loop through each row to find 5-nearest neighbors
 for (i in 1:n) {
-  # Get indices of the two smallest distances (excluding the diagonal)
+  # Get indices of the five smallest distances (excluding the diagonal)
   nearest_indices <- order(dmat[i, ], decreasing = FALSE)[2:6]
 
   # Set these indices to 1 in the adjacency matrix
@@ -359,14 +355,12 @@ for (i in 1:n) {
   nn_matrix[nearest_indices, i] <- 1
 }
 
-# Create adjacency matrix: two points are adjacent if they are within 10k of each other
-adjacency_matrix <- nn_matrix  #dmat < 50 #
-
-# adjacency_matrix <- st_intersects(buffers_original_crs, sparse = F)
-# diag(adjacency_matrix) <- 0
+# Create adjacency matrix: two points are adjacent if one is the other's five nearest neighbors
+adjacency_matrix <- nn_matrix 
 
 # Save design matrix, distance matrix, and adjacency matrix
-X <- buffers[c('population_density',
+X <- buffers[c('Sit_Scr',
+               'population_density',
                'percent_hispanic',
                'percent_black',
                'percent_indigenous',
@@ -377,178 +371,9 @@ X <- buffers[c('population_density',
                'percent_high_school_grad',
                'median_year_built')]
 X <- cbind.data.frame(Intercept = 1, X) # Add intercept
+# Drop geometry from X
+X <- st_drop_geometry(X)
 Z <- buffers$Z
 clusters <- buffers$cluster
 # Save preprocessed data. 
 save(X, Z, dmat, clusters, adjacency_matrix, buffers, file = 'data/preprocessed_superfunds.RData')
-
-########### Import TEMPORARY county-level outcome #############
-# bw <- read.csv('/Users/sophie/Downloads/verylow_birthweight/data_130422.csv')
-# bw$CountyFIPS <- str_pad(bw$CountyFIPS, 5, pad = '0')
-# bw$Value <- ifelse(bw$Value == 'Suppressed', NA, bw$Value)
-# bw$Value <- ifelse(bw$Value == 'No Events', 0, bw$Value)
-# bw$Value <- as.numeric(gsub('%', '', bw$Value)) # 25 percent missingness
-# bw_2015_2019 <- subset(bw, Start.Year == 2015)
-# bw_2000_2004 <- subset(bw, Start.Year == 2000)
-# bw <- merge(bw_2015_2019, bw_2000_2004, by = 'CountyFIPS', suffixes = c('_2015_2019', '_2000_2004'))
-# bw$Value <- bw$Value_2015_2019 - bw$Value_2000_2004
-# counties <- st_read('/Users/sophie/Downloads/tl_2018_us_county/tl_2018_us_county.shp')
-# mean(bw$CountyFIPS %in% counties$GEOID) # 0.999
-# bw_counties <- left_join(counties, bw, by = c('GEOID' = 'CountyFIPS'))
-# png('images/percent_low_bw.png', width = 1000, height = 1500, res = 120)
-# g1 <- ggplot() +
-#   geom_sf(data = bw_counties, aes(fill = Value_2015_2019), color = NA) +
-#   xlim(-125, -60) +
-#   ylim(24, 50) +
-#   labs(fill = '% Very Low Birthweight') +
-#   ggtitle('Very Low Birthweight by County, 2015-2029') +
-#   scale_fill_viridis_c() +
-#   theme_minimal() + 
-#   theme(
-#     panel.grid = element_blank(),
-#     axis.text = element_blank(),
-#     axis.ticks = element_blank(),
-#     axis.title = element_blank(),
-#     plot.title = element_text(hjust = 0.5)
-#   )
-# g2 <- ggplot() +
-#   geom_sf(data = bw_counties, aes(fill = Value_2000_2004), color = NA) +
-#   xlim(-125, -60) +
-#   ylim(24, 50) +
-#   labs(fill = '% Very Low Birthweight') +
-#   ggtitle('Very Low Birthweight by County, 2000-2004') +
-#   scale_fill_viridis_c() +
-#   theme_minimal() + 
-#   theme(
-#     panel.grid = element_blank(),
-#     axis.text = element_blank(),
-#     axis.ticks = element_blank(),
-#     axis.title = element_blank(),
-#     plot.title = element_text(hjust = 0.5)
-#   )
-# g3 <- ggplot() +
-#   geom_sf(data = bw_counties, aes(fill = Value), color = NA) +
-#   xlim(-125, -60) +
-#   ylim(24, 50) +
-#   labs(fill = 'Change in % Very Low BW') +
-#   ggtitle('Change in Very Low Birthweight by County, 2015-2019 vs 2000-2004') +
-#   scale_fill_gradient2(low = 'blue', mid = 'lightyellow', high = 'red', midpoint = 0) +
-#   theme_minimal() + 
-#   theme(
-#     panel.grid = element_blank(),
-#     axis.text = element_blank(),
-#     axis.ticks = element_blank(),
-#     axis.title = element_blank(),
-#     plot.title = element_text(hjust = 0.5)
-#   )
-# grid.arrange(g1, g2, g3, ncol = 1)
-# dev.off()
-# 
-# load('data/preprocessed_superfunds.RData')
-# # For each buffer, assign to it a Y value that is average percent low bw
-# bw_counties <- st_transform(bw_counties, st_crs(buffers))
-# intersected_counties <- st_intersection(buffers, bw_counties)
-# # Add area of intersection
-# intersected_counties$area <- st_area(intersected_counties)
-# intersected_counties$area <- as.numeric(intersected_counties$area)
-# buffers_outcome <- intersected_counties %>% 
-#   group_by(S_EPA_I) %>% # compute weighted mean
-#   summarise(Y = weighted.mean(Value, w = area, na.rm = T))
-# summary(buffers_outcome$Y)
-# # Merge with buffers
-# buffers_outcome <- left_join(buffers, 
-#                              st_drop_geometry(buffers_outcome %>% 
-#                                                 select(S_EPA_I,Y)), 
-#                              by = c('S_EPA_I' = 'S_EPA_I'))
-# 
-# # Save 
-# save(X, Z, dmat, clusters, adjacency_matrix, buffers_outcome, 
-#      file = 'data/preprocessed_superfunds_outcome.RData')
-# 
-# # Remove any rows with NA in buffers_outcome
-# buffers_outcome <- na.omit(buffers_outcome)
-# model_bw <- lm(Y ~ Z + log(population_density) + 
-#               percent_hispanic +
-#               percent_black +
-#               percent_indigenous +
-#               percent_asian +
-#               log(median_household_income) + 
-#               log(median_house_value) + 
-#               percent_poverty + 
-#               percent_high_school_grad,
-#             data = buffers_outcome)
-# summary(model_bw)
-# model_bw$coefficients['Z']/mean(buffers_outcome$Y, na.rm = T) 
-# # Interpretation IF significant : there is a 39.5 percent additional decrease in percent extremely low birthweights
-# # For treated sites compared to untreated sites
-# 
-# # Compute Moran's I of residuals
-# residuals <- residuals(model_bw)
-# # Inverse Distance based weights
-# coords <- cbind(buffers_outcome$Latitud, buffers_outcome$Longitd)
-# dmat <- distm(cbind(buffers_outcome$Longitd, buffers_outcome$Latitud), fun = distHaversine)
-# # Avoid division by zero by adding a small constant to zero distances
-# distance_weights <- 1/dmat
-# diag(distance_weights) <- 0
-# distance_weights_listw <- mat2listw(distance_weights, style = 'W', zero.policy = T)
-# # Moran test
-# moran.test(residuals, distance_weights_listw) # suggests weak but significant positive spatial autocorrelation
-# 
-# # 1. Compute the Haversine distance matrix
-# # Assuming buffers_outcome contains longitude ('Longitd') and latitude ('Latitud')
-# dmat <- distm(cbind(buffers_outcome$Longitd, buffers_outcome$Latitud), fun = distHaversine)
-# 
-# # 2. Define bins up to 500,000 meters (500 km) with a 50,000-meter (50 km) bin width
-# bin_width <- 10000  # 50 km
-# distance_bins <- seq(0, 500000, by = bin_width)
-# 
-# # 3. Compute semivariance for each bin
-# semivariance <- sapply(1:(length(distance_bins) - 1), function(k) {
-#   # Get pairs in the current bin
-#   lower_bound <- distance_bins[k]
-#   upper_bound <- distance_bins[k + 1]
-#   in_bin <- (dmat >= lower_bound & dmat < upper_bound)
-#   
-#   # Extract residual pairs
-#   residual_pairs <- outer(residuals, residuals, `-`)[in_bin]
-#   
-#   # Compute semivariance
-#   if (length(residual_pairs) > 0) {
-#     return(mean(residual_pairs^2) / 2)
-#   } else {
-#     return(NA)  # No pairs in this bin
-#   }
-# })
-# 
-# # 4. Calculate midpoints of bins for plotting
-# bin_midpoints <- (distance_bins[-1] + distance_bins[-length(distance_bins)]) / 2
-# 
-# # 5. Plot the semivariogram
-# # plot(bin_midpoints / 1000, semivariance, pch = 16, 
-# #      xlab = "Distance (km)", ylab = "Semivariance", 
-# #      main = "Semivariogram of Residuals (0–500 km)", type = 'l')
-# 
-# 
-# # Create a data frame for ggplot2
-# semivariogram_df <- data.frame(
-#   Distance_km = bin_midpoints / 1000,  # Convert meters to kilometers
-#   Semivariance = semivariance
-# )
-# 
-# png('images/semivariogram.png', width = 1000, height = 600, res = 150)
-# # Plot using ggplot2
-# ggplot(semivariogram_df, aes(x = Distance_km, y = Semivariance)) +
-#   geom_point(size = 3) +  # Points for each semivariance
-#   geom_line(linewidth = 1) +   # Line connecting the points
-#   labs(
-#     title = "Semivariogram of Residuals (0–500 km)",
-#     x = "Distance (km)",
-#     y = "Semivariance"
-#   ) +
-#   theme_minimal() +  # Clean theme
-#   theme(
-#     plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-#     axis.title = element_text(size = 12),
-#     axis.text = element_text(size = 10)
-#   )
-# dev.off()
