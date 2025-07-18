@@ -584,7 +584,7 @@ compute_dispersion <- function(w){
   # w is the n x 1 matrix of weights
   # returns the dispersion
   
-  return(1/sum(w^2))
+  return(sum(w^2))
 }
 
 # returns a nice data frame with balance
