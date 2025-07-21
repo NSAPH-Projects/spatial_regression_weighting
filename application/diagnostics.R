@@ -54,7 +54,7 @@ g <- ggplot() +
   ) +
   # Use the same variable for color and shape scales with unified legend
   scale_color_manual(
-    values = c("0" = "red", "1" = "green"),
+    values = c("0" = "orange", "1" = "dodgerblue"),
     name = "Treatment (Cleanup)",
     labels = c("Control", "Treated")
   ) +
@@ -69,11 +69,7 @@ dev.off()
 
 ################# CALCULATE IMPLIED WEIGHTS ##################################
 # Scale X
-X <- st_drop_geometry(X)
-orig_means_X <- colMeans(X[,2:11])
-orig_sds_X <- apply(X[,2:11], 2, sd)
-X[,2:11] <- scale(X[,2:11])
-X <- X[,-12]
+X[,2:12] <- scale(X[,2:12])
 X <- as.matrix(X)
 
 # GP model
@@ -122,19 +118,26 @@ buffers_merged <- cbind(buffer_centroids, REiw, CARiw, GPiw)
 buffers_merged_geo <- st_transform(buffers_merged, crs = 4326)
 
 buffers_merged_geo <- buffers_merged_geo[order(buffers_merged_geo$CARiw),]
+
+pts <- buffers_merged_geo %>%
+  st_centroid() %>%
+  cbind(st_coordinates(.)) %>%
+  st_set_geometry(NULL)
 g <- ggplot() +
   scale_shape_manual(values = c("0" = 21, "1" = 24),
                      guide = guide_legend(order = 1)) + 
   
   # Base map with county outlines
   geom_sf(data = states, fill = NA, color = "darkgray", linetype = "solid", size = 0.5) +
-  # Control group (Z == 0): Red circle with black outline
-  # Custom shape: 21 (circle), 24 (triangle)
-  geom_sf(data = buffers_merged_geo[buffers_merged_geo$Z == 0,], 
-          aes(fill = CARiw, shape = factor(Z)), 
-          size = 2, stroke = 0.25, color = "black") +  # Black outline
-  
-  scale_fill_gradient2(low = "green", mid = "white", high = "red", midpoint = 0, 
+  geom_point(
+    data     = filter(pts, Z == 0),
+    aes(X, Y, fill = CARiw, shape = factor(Z)),
+    size     = 1.5, 
+    stroke   = 0.25, 
+    color    = "black",
+    position = position_nudge(x = 0.5, y = 0.5)  # ← correct placement
+  ) +
+  scale_fill_gradient2(low = "dodgerblue", mid = "white", high = "orange", midpoint = 0, 
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 0,]$CARiw, na.rm = TRUE), 
                                   max(buffers_merged_geo[buffers_merged_geo$Z == 0,]$CARiw, na.rm = TRUE)),
                        labels = function(x) sprintf("%.3f", x),
@@ -146,9 +149,9 @@ g <- ggplot() +
   # Treated group (Z == 1): Green triangle with black outline
   geom_sf(data = buffers_merged_geo[buffers_merged_geo$Z == 1,], 
           aes(fill = CARiw, shape = factor(Z)), 
-          size = 2, stroke = 0.25, color = "black") +  
+          size = 1.5, stroke = 0.25, color = "black") +  
   
-  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0, 
+  scale_fill_gradient2(low = "orange", mid = "white", high = "dodgerblue", midpoint = 0, 
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 1,]$CARiw, na.rm = TRUE), 
                                   max(buffers_merged_geo[buffers_merged_geo$Z == 1,]$CARiw, na.rm = TRUE)),
                        labels = function(x) sprintf("%.3f", x),
@@ -185,12 +188,16 @@ g <- ggplot() +
   geom_sf(data = states, fill = NA, color = "darkgray", linetype = "solid", size = 0.5) +
   
   # Control group (Z == 0): Red circle with black outline
-  geom_sf(data = buffers_merged_geo[buffers_merged_geo$Z == 0,], 
-          aes(fill = REiw, shape = factor(Z)), 
-          size = 2, stroke = 0.25, color = "black") +  # Black outline
-
+  geom_point(
+    data     = filter(pts, Z == 0),
+    aes(X, Y, fill = REiw, shape = factor(Z)),
+    size     = 1.5, 
+    stroke   = 0.25, 
+    color    = "black",
+    position = position_nudge(x = 0.5, y = 0.5)  # ← correct placement
+  ) +
   
-  scale_fill_gradient2(low = "green", mid = "white", high = "red", midpoint = 0, 
+  scale_fill_gradient2(low = "dodgerblue", mid = "white", high = "orange", midpoint = 0, 
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 0,]$REiw, na.rm = TRUE), 
                                   max(buffers_merged_geo[buffers_merged_geo$Z == 0,]$REiw, na.rm = TRUE)),
                        labels = function(x) sprintf("%.3f", x),
@@ -201,10 +208,10 @@ g <- ggplot() +
   
   # Treated group (Z == 1): Green triangle with black outline
   geom_sf(data = buffers_merged_geo[buffers_merged_geo$Z == 1,], 
-          aes(fill = REiw, shape = factor(Z)), 
-          size = 2, stroke = 0.25, color = "black") +  
+          aes(fill = REiw, shape = factor(Z)),
+          size = 1.5, stroke = 0.25, color = "black") +  
   
-  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0, 
+  scale_fill_gradient2(low = "orange", mid = "white", high = "dodgerblue", midpoint = 0, 
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 1,]$REiw, na.rm = TRUE), 
                                   max(buffers_merged_geo[buffers_merged_geo$Z == 1,]$REiw, na.rm = TRUE)),
                        labels = function(x) sprintf("%.3f", x),
@@ -240,12 +247,16 @@ g <- ggplot() +
   geom_sf(data = states, fill = NA, color = "darkgray", linetype = "solid", size = 0.5) +
   
   # Control group (Z == 0): Red circle with black outline
-  geom_sf(data = buffers_merged_geo[buffers_merged_geo$Z == 0,], 
-          aes(fill = GPiw, shape = factor(Z)), 
-          size = 2, stroke = 0.25, color = "black") +  # Black outline
-  
+  geom_point(
+    data     = filter(pts, Z == 0),
+    aes(X, Y, fill = GPiw, shape = factor(Z)),
+    size     = 1.5, 
+    stroke   = 0.25, 
+    color    = "black",
+    position = position_nudge(x = 0.5, y = 0.5)  # ← correct placement
+  ) +
 
-  scale_fill_gradient2(low = "green", mid = "white", high = "red", midpoint = 0, 
+  scale_fill_gradient2(low = "dodgerblue", mid = "white", high = "orange", midpoint = 0, 
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 0,]$GPiw, na.rm = TRUE), 
                                   max(buffers_merged_geo[buffers_merged_geo$Z == 0,]$GPiw, na.rm = TRUE)),
                        labels = function(x) sprintf("%.3f", x),
@@ -257,9 +268,9 @@ g <- ggplot() +
   # Treated group (Z == 1): Green triangle with black outline
   geom_sf(data = buffers_merged_geo[buffers_merged_geo$Z == 1,],
           aes(fill = GPiw, shape = factor(Z)),
-          size = 2, stroke = 0.25, color = "black") +
+          size = 1.5, stroke = 0.25, color = "black") +
   
-  scale_fill_gradient2(low = "red", mid = "white", high = "green", midpoint = 0,
+  scale_fill_gradient2(low = "orange", mid = "white", high = "dodgerblue", midpoint = 0,
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 1,]$GPiw, na.rm = TRUE), 
                                   max(buffers_merged_geo[buffers_merged_geo$Z == 1,]$GPiw, na.rm = TRUE)),
                        labels = function(x) sprintf("%.3f", x),
@@ -284,7 +295,7 @@ g <- ggplot() +
   )
 gGP <- plot_with_insets(g)
 
-png('images/impliedweights_us.png', width = 1500, height = 2000, res = 200)
+png('images/impliedweights_us.png', width = 1500, height = 2000, res = 250)
 grid.arrange(gRE, gCAR, gGP, ncol = 1)
 dev.off()
 
