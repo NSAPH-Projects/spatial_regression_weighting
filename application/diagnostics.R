@@ -64,7 +64,7 @@ g <- ggplot() +
     labels = c("Control", "Treated")
   )
 png('images/treatment.png', width = 1500, height = 900, res = 160)
-plot_with_insets(g)
+plot_with_insets(g) 
 dev.off()
 
 ################# CALCULATE IMPLIED WEIGHTS ##################################
@@ -135,7 +135,7 @@ g <- ggplot() +
     size     = 1.5, 
     stroke   = 0.25, 
     color    = "black",
-    position = position_nudge(x = 0.5, y = 0.5)  # ← correct placement
+    position = position_nudge(x = 0.15, y = 0)  # ← correct placement
   ) +
   scale_fill_gradient2(low = "dodgerblue", mid = "white", high = "orange", midpoint = 0, 
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 0,]$CARiw, na.rm = TRUE), 
@@ -176,6 +176,15 @@ g <- ggplot() +
   )
 
 gCAR <- plot_with_insets(g)
+gCAR <- ggdraw(gCAR) +   
+  draw_plot(g + coord_sf(xlim = c(-80.5,-79.5), ylim = c(25.5,26.5)) + 
+                                     theme(legend.position = "none",
+                                           plot.title = element_blank(),
+                                           plot.background = element_rect(color = "black", linewidth = 1)#, # Add outline
+                                           #panel.background = element_rect(fill = "white")
+                                           # Add some margin around the inset
+                                     ), 
+                                   x = 0.5, y = 0.15, width = 0.2, height = 0.15, scale = 1.5)
 # Plot  FE
 buffers_merged_geo <- buffers_merged_geo[order(buffers_merged_geo$REiw),]
 g <- ggplot() +
@@ -194,7 +203,7 @@ g <- ggplot() +
     size     = 1.5, 
     stroke   = 0.25, 
     color    = "black",
-    position = position_nudge(x = 0.5, y = 0.5)  # ← correct placement
+    position = position_nudge(x = 0.15, y = 0)  # ← correct placement
   ) +
   
   scale_fill_gradient2(low = "dodgerblue", mid = "white", high = "orange", midpoint = 0, 
@@ -236,6 +245,15 @@ g <- ggplot() +
   )
 
 gRE <- plot_with_insets(g)
+gRE <- ggdraw(gRE) +   
+  draw_plot(g + coord_sf(xlim = c(-80.5,-79.5), ylim = c(25.5,26.5)) + 
+              theme(legend.position = "none",
+                    plot.title = element_blank(),
+                    plot.background = element_rect(color = "black", linewidth = 1)#, # Add outline
+                    #panel.background = element_rect(fill = "white")
+                    # Add some margin around the inset
+              ), 
+            x = 0.5, y = 0.15, width = 0.2, height = 0.15, scale = 1.5)
 # Plot  GP
 buffers_merged_geo <- buffers_merged_geo[order(buffers_merged_geo$GPiw),]
 g <- ggplot() +
@@ -253,7 +271,7 @@ g <- ggplot() +
     size     = 1.5, 
     stroke   = 0.25, 
     color    = "black",
-    position = position_nudge(x = 0.5, y = 0.5)  # ← correct placement
+    position = position_nudge(x = 0.15, y = 0)  # ← correct placement
   ) +
 
   scale_fill_gradient2(low = "dodgerblue", mid = "white", high = "orange", midpoint = 0, 
@@ -294,8 +312,17 @@ g <- ggplot() +
     legend.key.height = unit(0.2, "cm")
   )
 gGP <- plot_with_insets(g)
+gGP <- ggdraw(gGP) +   
+  draw_plot(g + coord_sf(xlim = c(-80.5,-79.5), ylim = c(25.5,26.5)) + 
+              theme(legend.position = "none",
+                    plot.title = element_blank(),
+                    plot.background = element_rect(color = "black", linewidth = 1)#, # Add outline
+                    #panel.background = element_rect(fill = "white")
+                    # Add some margin around the inset
+              ), 
+            x = 0.5, y = 0.15, width = 0.2, height = 0.15, scale = 1.5)
 
-png('images/impliedweights_us.png', width = 1500, height = 2000, res = 250)
+png('images/impliedweights_us.png', width = 1500, height = 2000, res = 230)
 grid.arrange(gRE, gCAR, gGP, ncol = 1)
 dev.off()
 
@@ -675,3 +702,58 @@ g <- ggplot() +
 plot_with_insets(g)
 dev.off()
 
+################ PLOT OF PROPERTIES OF THE WEIGHTS ##############
+# Calculate the proportion of control neighbors each treated unit has and the number of treated neighbors that each control unit has
+prop_neighbors_opposite <- rep(NA, nrow(buffers_merged_geo))
+for (i in 1:nrow(buffers_merged_geo)) {
+  if (buffers_merged_geo$Z[i] == 1) {
+    prop_neighbors_opposite[i] <- sum(adjacency_matrix[i,buffers_merged_geo$Z == 0])/sum(adjacency_matrix[i,])
+  } else {
+    prop_neighbors_opposite[i] <- sum(adjacency_matrix[i,buffers_merged_geo$Z == 1])/sum(adjacency_matrix[i,])
+  }
+}
+g1 <- ggplot(buffers_merged_geo, aes(x = prop_neighbors_opposite, y = abs(CARiw))) +
+  geom_point() +
+  labs(title = "Conditional Autoregressive",
+       x = "Proportion of neighbors with the opposite treatment status",
+       y = "absolute implied weight") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) 
+
+# Calculate the average distance of control neighbors for each treated unit and the average distance of treated neighbors for each control unit
+max_distance_opposite <- rep(NA, nrow(buffers_merged_geo))
+for (i in 1:nrow(buffers_merged_geo)) {
+  if (buffers_merged_geo$Z[i] == 1) {
+    max_distance_opposite[i] <- max(dmat[i,buffers_merged_geo$Z == 0])/max(dmat[i,])
+  } else {
+    max_distance_opposite[i] <- max(dmat[i,buffers_merged_geo$Z == 1])/max(dmat[i,])
+  }
+}
+# g2 <- ggplot(buffers_merged_geo, aes(x = max_distance_opposite, y = abs(GPiw))) +
+#   geom_point() +
+#   labs(title = "Gaussian Process",
+#        x = "Maximum Distance to Neighbors with the Opposite Treatment Status",
+#        y = "absolute implied weight") +
+#   theme(plot.title = element_text(hjust = 0.5)) +
+#   theme_minimal()
+
+# Calculate the proportion of control units in a cluster for each treated unit and the proportion of treated units in a cluster for each control unit
+prop_cluster_opposite <- rep(NA, nrow(buffers_merged_geo))
+for (i in 1:nrow(buffers_merged_geo)) {
+  if (buffers_merged_geo$Z[i] == 1) {
+    prop_cluster_opposite[i] <- length(which(clusters == clusters[i] & buffers_merged_geo$Z == 0))/length(which(clusters == clusters[i]))
+  } else {
+    prop_cluster_opposite[i] <- length(which(clusters == clusters[i] & buffers_merged_geo$Z == 1))/length(which(clusters == clusters[i]))
+  }
+}
+g3 <- ggplot(buffers_merged_geo, aes(x = prop_cluster_opposite, y = abs(REiw))) +
+  geom_point() +
+  labs(title = "Random Effects",
+       x = "Proportion of units in the same state with the opposite treatment status",
+       y = "absolute implied weight") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+png('images/weights_properties.png', width = 700, height = 1000, res = 130)
+grid.arrange(g3,g1, ncol = 1)
+dev.off()
