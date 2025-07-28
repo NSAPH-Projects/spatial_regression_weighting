@@ -172,10 +172,10 @@ buffers_outcome$cluster <- 32 # assign border PA sites to NJ (ignore state in th
 clusters <- buffers_outcome$cluster
 
 rho2 <- 10
-kappa <- 0.1 # 0.2 # as you increase, becomes more extreme
-rangec <- 300
+kappa <- 10 
+rangec <- 500
 phic <- rangec/(2*sqrt(kappa))
-S <- geoR::matern(u =  dmat/10000, phi = phic, kappa = kappa)
+S <- geoR::matern(u =  dmat, phi = phic, kappa = kappa)
 E <- eigen(S)
 Egp <- E$values
 Vgp <- E$vectors
@@ -1204,10 +1204,10 @@ buffers_outcome_high$cluster[buffers_outcome_high$cluster == 36] = 40
 clusters <- buffers_outcome_high$cluster
 
 rho2 <- 10
-kappa <- 0.1 # 0.2 # as you increase, becomes more extreme
-rangec <- 300
+kappa <- 10 
+rangec <- 500
 phic <- rangec/(2*sqrt(kappa))
-S <- geoR::matern(u =  dmat/10000, phi = phic, kappa = kappa)
+S <- geoR::matern(u =  dmat, phi = phic, kappa = kappa)
 E <- eigen(S)
 Egp <- E$values
 Vgp <- E$vectors
@@ -1301,10 +1301,10 @@ buffers_outcome_low$cluster[buffers_outcome_low$cluster == 36] = 40
 clusters <- buffers_outcome_low$cluster
 
 rho2 <- 10
-kappa <- 0.1 # 0.2 # as you increase, becomes more extreme
-rangec <- 300
+kappa <- 10 
+rangec <- 500
 phic <- rangec/(2*sqrt(kappa))
-S <- geoR::matern(u =  dmat/10000, phi = phic, kappa = kappa)
+S <- geoR::matern(u =  dmat, phi = phic, kappa = kappa)
 E <- eigen(S)
 Egp <- E$values
 Vgp <- E$vectors
@@ -1354,7 +1354,6 @@ mean(100*buffers_outcome_low$Y[buffers_outcome_low$Z == 1])/(mean(100*buffers_ou
 # more dangerous, contaminated sites. So cleanup does not as effectively reduce low birth weight compared to 
 # the less contaminated sites.. this could be a result of some other factor that is not accounted by the model
 
-
 buffers_outcome_nj <- subset(buffers_outcome, cluster == '32')
 # Top 1/3 is site scores > 50
 n <- nrow(buffers_outcome_nj)
@@ -1401,10 +1400,10 @@ buffers_outcome_nj$cluster[buffers_outcome_nj$cluster == 36] = 40
 clusters <- buffers_outcome_nj$cluster
 
 rho2 <- 10
-kappa <- 0.1 # 0.2 # as you increase, becomes more extreme
-rangec <- 300
+kappa <- 10 
+rangec <- 500
 phic <- rangec/(2*sqrt(kappa))
-S <- geoR::matern(u =  dmat/10000, phi = phic, kappa = kappa)
+S <- geoR::matern(u =  dmat, phi = phic, kappa = kappa)
 E <- eigen(S)
 Egp <- E$values
 Vgp <- E$vectors

@@ -73,10 +73,11 @@ X[,2:12] <- scale(X[,2:12])
 X <- as.matrix(X)
 
 # GP model
-kappa <- 0.1 # 0.2 # as you increase, becomes more extreme
-rangec <- 300
+set.seed(100)
+kappa <- 10 
+rangec <- 500
 phic <- rangec/(2*sqrt(kappa))
-S <- geoR::matern(u =  dmat/10000, phi = phic, kappa = kappa)
+S <- geoR::matern(u =  dmat, phi = phic, kappa = kappa)
 Sigma <- diag(n) + 10*S
 Sigmainv <- solve(Sigma)
 GPiw <- impliedweightsgeneral(X = X,
@@ -330,13 +331,18 @@ dev.off()
 ######################################## UNMEASURED SPATIAL CONFOUNDER EXAMPLES #########################################
 buffers_merged <- st_centroid(buffers)
 
+# GP 
 set.seed(100)
-kappa <- 0.1 # 0.2 # as you increase, becomes more extreme
-rangec <- 300
+kappa <- 10 
+rangec <- 500
 phic <- rangec/(2*sqrt(kappa))
-S <- geoR::matern(u =  dmat/10000, phi = phic, kappa = kappa)
+S <- geoR::matern(u =  dmat, phi = phic, kappa = kappa)
 E <- eigen(S)
 V <- E$vectors
+moran_adhoc(V[,1:n] %*% rnorm(ncol(V), mean = 0, sd = 1/(1:ncol(V))^5), Wmat = S, coeff = 1/E$values[1])
+moran_adhoc(V[,1:n] %*% rnorm(ncol(V), mean = 0, sd = 1/(1:ncol(V))), Wmat = S, coeff = 1/E$values[1])
+moran_adhoc(rnorm(ncol(V), mean = 0, sd =1), Wmat = S, coeff = 1/E$values[1])
+
 Sigma <- diag(n) + 10*S
 Sigmainv <- solve(Sigma)
 GPiw <- impliedweightsgeneral(X = X,
@@ -345,31 +351,31 @@ GPiw <- impliedweightsgeneral(X = X,
 sum(GPiw[Z == 1]);sum(GPiw[Z == 0])
 
 # Squared Eigenvector imbalance
-Es <- eigen(S)
-m = 0
-while (m < 0.9 | m > 0.95){
-  buffers_merged$GP_u1 <- V[,1:n] %*% rnorm(ncol(V), mean = 0, sd = 1/(1:ncol(V))^4) #runif(ncol(V), min = 0, max = 1)
+#Es <- eigen(S)
+m <- 0
+while (m < 0.7 | m > 0.95){
+  buffers_merged$GP_u1 <- V[,1:n] %*% rnorm(ncol(V), mean = 0, sd = 1/(1:ncol(V))^5) #runif(ncol(V), min = 0, max = 1)
   buffers_merged$GP_u1 <- buffers_merged$GP_u1 - mean(buffers_merged$GP_u1)
   buffers_merged$GP_u1 <- buffers_merged$GP_u1/norm(buffers_merged$GP_u1, type = '2')
-  m <- moran_adhoc(buffers_merged$GP_u1, Wmat = S, coeff = 1/Es$values[2])
+  m <- moran_adhoc(buffers_merged$GP_u1, Wmat = S, coeff = 1/E$values[1])
 }
 print(paste0('Moran I is ', m, ' and imbalance is ', sum(GPiw*(2*Z-1)*buffers_merged$GP_u1)))
 
 m = 0
 while (m < 0.45 | m > 0.55){
-  buffers_merged$GP_u2 <- V[,1:n] %*% rnorm(ncol(V), mean = 0, sd = 1/(1:ncol(V))^2) #runif(ncol(V), min = 0, max = 1)
+  buffers_merged$GP_u2 <- V[,1:n] %*% rnorm(ncol(V), mean = 0, sd = 1/1:ncol(V)) #runif(ncol(V), min = 0, max = 1)
   buffers_merged$GP_u2 <- buffers_merged$GP_u2 - mean(buffers_merged$GP_u2)
   buffers_merged$GP_u2 <- buffers_merged$GP_u2/norm(buffers_merged$GP_u2, type = '2')
-  m <- moran_adhoc(buffers_merged$GP_u2, Wmat = S, coeff = 1/Es$values[2])
+  m <- moran_adhoc(buffers_merged$GP_u2, Wmat = S, coeff = 1/E$values[1])
 }
 print(paste0('Moran I is ', m, ' and imbalance is ', sum(GPiw*(2*Z-1)*buffers_merged$GP_u2)))
 
 m = 1
 while (m > 0.1){
-  buffers_merged$GP_u3 <- V[,1:n] %*% rnorm(ncol(V), mean = 0, sd = sqrt(1/(1:ncol(V)))) #runif(ncol(V), min = 0, max = 1)
+  buffers_merged$GP_u3 <- V[,1:n] %*% rnorm(ncol(V), mean = 0, sd = sqrt(1/(1:ncol(V))))
   buffers_merged$GP_u3 <- buffers_merged$GP_u3 - mean(buffers_merged$GP_u3)
   buffers_merged$GP_u3 <- buffers_merged$GP_u3/norm(buffers_merged$GP_u3, type = '2')
-  m <- moran_adhoc(buffers_merged$GP_u3, Wmat = S, coeff = 1/Es$values[2])
+  m <- moran_adhoc(buffers_merged$GP_u3, Wmat = S, coeff = 1/E$values[1])
 }
 print(paste0('Moran I is ', m, ' and imbalance is ', sum(GPiw*(2*Z-1)*buffers_merged$GP_u3)))
 
@@ -461,8 +467,9 @@ for (k in unique(statefactor)){
   nk = sum(statefactor == k)
   Jks[[length(Jks) + 1]] = matrix(1, nrow = nk, ncol = nk)
 }
-S = bdiag(Jks)
-V <- eigen(S)$vectors
+S <- bdiag(Jks)
+E <- eigen(S)
+V <- E$vectors
 Sigma <- diag(n) + 10*S
 Sigmainv <- solve(Sigma)
 REiw <- impliedweightsgeneral(X = X,
@@ -470,13 +477,12 @@ REiw <- impliedweightsgeneral(X = X,
                               Sigmainv = Sigmainv)
 
 # Squared Eigenvector imbalance
-Es <- eigen(S)
 m = 0
 while (m < 0.9 | m > 0.95) {
   buffers_merged$RE_u1 <- V[,1:n] %*% c(rnorm(51, mean = 0, sd = 1/(1:ncol(V))), rep(0, ncol(V)-51)) #runif(ncol(V), min = 0, max = 1)
   buffers_merged$RE_u1 <- buffers_merged$RE_u1 - mean(buffers_merged$RE_u1)
   buffers_merged$RE_u1 <- buffers_merged$RE_u1/norm(buffers_merged$RE_u1, type = '2')
-  m <- moran_adhoc(buffers_merged$RE_u1, Wmat = S, coeff = 1/Es$values[1])
+  m <- moran_adhoc(buffers_merged$RE_u1, Wmat = S, coeff = 1/E$values[1])
 }
 print(paste0('Moran I is ', m, ' and imbalance is ', sum(REiw*(2*Z-1)*buffers_merged$RE_u1)))
 
@@ -485,7 +491,7 @@ while (m < 0.45 | m > 0.55){
   buffers_merged$RE_u2 <- V[,1:n] %*% c(rnorm(51, mean = 0, sd = 1/(1:ncol(V))), rep(0.01, ncol(V)-51)) #runif(ncol(V), min = 0, max = 1)
   buffers_merged$RE_u2 <- buffers_merged$RE_u2 - mean(buffers_merged$RE_u2)
   buffers_merged$RE_u2 <- buffers_merged$RE_u2/norm(buffers_merged$RE_u2, type = '2')
-  m <- moran_adhoc(buffers_merged$RE_u2, Wmat = S, coeff = 1/Es$values[1])
+  m <- moran_adhoc(buffers_merged$RE_u2, Wmat = S, coeff = 1/E$values[1])
 }
 print(paste0('Moran I is ', m, ' and imbalance is ', sum(REiw*(2*Z-1)*buffers_merged$RE_u2)))
 
@@ -494,7 +500,7 @@ while (m > 0.1){
   buffers_merged$RE_u3 <- V[,1:n] %*% c(rnorm(51, mean = 0, sd = 1/(1:ncol(V))), rep(0.1, ncol(V)-51)) #runif(ncol(V), min = 0, max = 1)
   buffers_merged$RE_u3 <- buffers_merged$RE_u3 - mean(buffers_merged$RE_u3)
   buffers_merged$RE_u3 <- buffers_merged$RE_u3/norm(buffers_merged$RE_u3, type = '2')
-  m <- moran_adhoc(buffers_merged$RE_u3, Wmat = S, coeff = 1/Es$values[1])
+  m <- moran_adhoc(buffers_merged$RE_u3, Wmat = S, coeff = 1/E$values[1])
 }
 print(paste0('Moran I is ', m, ' and imbalance is ', sum(REiw*(2*Z-1)*buffers_merged$RE_u3)))
 
@@ -584,7 +590,8 @@ sigma2 <- 1
 rho2 <- 10
 L <- diag(rowSums(adjacency_matrix)) - adjacency_matrix
 S <- ginv(as.matrix(L))
-V <- Re(eigen(S)$vectors)
+E <- eigen(S)
+V <- Re(E$vectors)
 Sigma <- sigma2*diag(n) + rho2*S
 Sigmainv <- solve(Sigma)
 CARiw <- impliedweightsgeneral(X = X,
@@ -593,13 +600,12 @@ CARiw <- impliedweightsgeneral(X = X,
 sum(CARiw[Z == 1]);sum(CARiw[Z == 0])
 
 # Squared Eigenvector imbalance
-Es <- eigen(S)
 m = 0
 while (m < 0.9 | m > 0.95){
   buffers_merged$CAR_u1 <- V[,1:n] %*% rnorm(ncol(V), mean = 0, sd = 1/(1:ncol(V))^2) #runif(ncol(V), min = 0, max = 1)
   buffers_merged$CAR_u1 <- buffers_merged$CAR_u1 - mean(buffers_merged$CAR_u1)
   buffers_merged$CAR_u1 <- buffers_merged$CAR_u1/norm(buffers_merged$CAR_u1, type = '2')
-  m <- moran_adhoc(buffers_merged$CAR_u1, Wmat = S, coeff = 1/Re(Es$values[1]))
+  m <- moran_adhoc(buffers_merged$CAR_u1, Wmat = S, coeff = 1/Re(E$values[1]))
 }
 print(paste0('Moran I is ', m, ' and imbalance is ', sum(CARiw*(2*Z-1)*buffers_merged$CAR_u1)))
 
@@ -608,7 +614,7 @@ while (m < 0.45 | m > 0.55){
   buffers_merged$CAR_u2 <- V[,1:n] %*% rnorm(ncol(V), mean = 0, sd = 1/(1:ncol(V))) #runif(ncol(V), min = 0, max = 1)
   buffers_merged$CAR_u2 <- buffers_merged$CAR_u2 - mean(buffers_merged$CAR_u2)
   buffers_merged$CAR_u2 <- buffers_merged$CAR_u2/norm(buffers_merged$CAR_u2, type = '2')
-  m <- moran_adhoc(buffers_merged$CAR_u2, Wmat = S, coeff = 1/Re(Es$values[1]))
+  m <- moran_adhoc(buffers_merged$CAR_u2, Wmat = S, coeff = 1/Re(E$values[1]))
 }
 print(paste0('Moran I is ', m, ' and imbalance is ', sum(CARiw*(2*Z-1)*buffers_merged$CAR_u2)))
 
@@ -617,7 +623,7 @@ while (m > 0.1){
   buffers_merged$CAR_u3 <- V[,1:n] %*% rnorm(ncol(V), mean = 0, sd = sqrt(1/(1:ncol(V)))) #runif(ncol(V), min = 0, max = 1)
   buffers_merged$CAR_u3 <- buffers_merged$CAR_u3 - mean(buffers_merged$CAR_u3)
   buffers_merged$CAR_u3 <- buffers_merged$CAR_u3/norm(buffers_merged$CAR_u3, type = '2')
-  m <- moran_adhoc(buffers_merged$CAR_u3, Wmat = S, coeff = 1/Re(Es$values[1]))
+  m <- moran_adhoc(buffers_merged$CAR_u3, Wmat = S, coeff = 1/Re(E$values[1]))
 }
 print(paste0('Moran I is ', m, ' and imbalance is ', sum(CARiw*(2*Z-1)*buffers_merged$CAR_u3)))
 
