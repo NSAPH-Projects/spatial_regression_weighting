@@ -21,10 +21,10 @@ X <- st_drop_geometry(X)
 X[,2:11] <- scale(X[,2:11])
 X <- X[,-12]
 X <- as.matrix(X)
-kappa <- 0.1 # 0.2 # as you increase, becomes more extreme
-rangec <- 300
+kappa <- 10 
+rangec <- 500
 phic <- rangec/(2*sqrt(kappa))
-S <- geoR::matern(u =  dmat/10000, phi = phic, kappa = kappa)
+S <- geoR::matern(u =  dmat, phi = phic, kappa = kappa)
 E <- eigen(S)
 Egp <- E$values
 Vgp <- E$vectors
