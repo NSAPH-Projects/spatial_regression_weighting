@@ -15,7 +15,7 @@ A data frame of covariates for each buffer around a Superfund site.
 | Variable | Type | Units | Description |
 |----------|------|-------|-------------|
 | Intercept | numeric | – | Constant 1. |
-| Sit_Scr | numeric | – | NPL site score from EPA; missing values imputed to sample median. |
+| Sit_Scr | numeric | – | NPL site score from EPA; missing values imputed with a single imputation model using other confounders and treatment as predictors. |
 | population_density | numeric | people per square mile | Estimated population density within 2-km buffer (from Census 2000 tracts, area-weighted). |
 | percent_hispanic | numeric | proportion (0–1) | Area-weighted mean Hispanic proportion. |
 | percent_black | numeric | proportion (0–1) | Area-weighted mean Black proportion. |
@@ -61,7 +61,7 @@ An `sf` and `data.frame` object of 2-km buffer polygons around Superfund sites w
 | Field | Type | Units | Description |
 |-------|------|-------|-------------|
 | S_EPA_I | character | – | EPA site identifier. |
-| Sit_Scr | numeric | – | NPL site score; missing values imputed. |
+| Sit_Scr | numeric | – | NPL site score; missing values imputed with single imputation. |
 | Z | integer (0/1) | – | Treatment indicator (see above). |
 | cluster | integer | – | Cluster ID (see above). |
 | Latitud | numeric | degrees | Site latitude. |
