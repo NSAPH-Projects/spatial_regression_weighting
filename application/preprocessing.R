@@ -1,18 +1,11 @@
 library(tidycensus)
-library(tidyr)
 library(dplyr)
-library(ggplot2)
 library(sf)
-library(sp)
-library(spdep)
-library(gridExtra)
-library(tidyverse)
 library(arcpullr)
-library(stringr)
 library(matrixStats)
-library(gstat)
 library(geosphere)
 library(Matrix)
+library(mice)
 
 setwd('../') # Work in parent directory
 
@@ -303,6 +296,9 @@ buffer_averages$population_density <- buffer_averages$population_density * 25899
 save(buffer_averages, file = 'data/buffer_averages.RData')
 
 #################### 3: Merge exposure and confounder data ####################
+# rename the column Site_EPA_ID in buffer_averages to S_EPA_I
+buffer_averages <- buffer_averages %>%
+  rename(S_EPA_I = Site_EPA_ID)
 buffers <- buffers %>%
   left_join(
     st_drop_geometry(buffer_averages),
@@ -327,10 +323,57 @@ buffers <- buffers %>% dplyr::select(S_EPA_I,
                                       median_year_built)
 # Drop the rows with NA census confounder values (PR, Guam, Virgin Islands)
 buffers <- buffers[!is.na(buffers$percent_hispanic),] # 1584
+# That line wasn't specific to missingness in Hispanic but census confounders more generally
 # Order by cluster
 buffers <- buffers[order(buffers$cluster),]
-# Not all buffers have Site Scores. Naively impute the 41 missing Site Scores with median
-buffers$Sit_Scr[is.na(buffers$Sit_Scr)] <- median(buffers$Sit_Scr, na.rm = TRUE)
+# Not all buffers have Site Scores. 
+# Impute the missing values using other confounders and binary treatment using mice
+ # Keep only needed columns (plus ID/cluster for merging later)
+predictors <- c(
+  "Z",
+  "population_density",
+  "percent_hispanic",
+  "percent_black",
+  "percent_indigenous",
+  "percent_asian",
+  "median_household_income",
+  "median_house_value",
+  "percent_poverty",
+  "percent_high_school_grad",
+  "median_year_built"
+)
+keep_cols <- unique(c(
+  "S_EPA_I",
+  "Sit_Scr",
+  predictors
+))
+buffers_imp <- st_drop_geometry(buffers[, intersect(names(buffers), keep_cols)])
+buffers_imp[,4:ncol(buffers_imp)] <- scale(buffers_imp[,4:ncol(buffers_imp)]) # standardize predictors
+
+meth <- make.method(buffers_imp)
+meth[] <- ""              # default: do not impute
+meth['Sit_Scr'] <- "pmm"     # impute only Sit_Scr
+
+pred <- matrix(0, nrow = ncol(buffers_imp), ncol = ncol(buffers_imp),
+               dimnames = list(names(buffers_imp), names(buffers_imp)))
+pred['Sit_Scr', predictors[predictors %in% names(buffers_imp)]] <- 1
+
+set.seed(123)
+imp <- mice(
+  data = buffers_imp,
+  m = 1,              # single imputation
+  maxit = 15,
+  method = meth,
+  predictorMatrix = pred,
+  printFlag = TRUE
+)
+
+buffers_completed <- complete(imp, 1)
+# Check order is the same
+mean(buffers_completed$S_EPA_I == buffers$S_EPA_I)
+# impute the original missing values of buffers with the imputed values
+buffers$Sit_Scr <- buffers_completed$Sit_Scr
+
 buffers <- na.omit(buffers) # one median house value missing
 # n = 1583
 
