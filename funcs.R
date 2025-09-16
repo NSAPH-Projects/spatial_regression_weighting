@@ -97,10 +97,8 @@ fit_method <- function(Y,
                        Sigmainvgp = NULL,
                        tols = NULL,
                        Xtol = 0,
-                       method = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW', 'spatialcoord'),
+                       method = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW'),
                        neigen = 50,
-                       lat = NULL,
-                       long = NULL,
                        boot = F) {
   
   # Y is the outcome vector
@@ -129,7 +127,6 @@ fit_method <- function(Y,
       ests <- boot_func(Y=Y, X=X, Z=Z, 
                         Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
                         Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
-                        lat = lat, long = long,
        tols = tols, method = method, neigen = neigen)
       boot_sd <- sd(ests)
       return(list('est' = coefficients(ols_model)['Z'], 'boot_sd' = boot_sd))
@@ -142,7 +139,6 @@ fit_method <- function(Y,
     if (boot){
       ests <- boot_func(Y=Y, X=X, Z=Z, 
                         Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
-                        lat = lat, long = long,
                         Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
        tols = tols, method = method, neigen = neigen)
       boot_sd <- sd(ests)
@@ -157,7 +153,6 @@ fit_method <- function(Y,
     if (boot){
       ests <- boot_func(Y=Y, X=X, Z=Z, 
                         Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
-                        lat = lat, long = long,
                         Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
        tols = tols, method = method, neigen = neigen)
       boot_sd <- sd(ests)
@@ -172,10 +167,8 @@ fit_method <- function(Y,
     if (boot){
       ests <- boot_func(Y=Y, X=X, Z=Z, 
                         Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
-                        lat = lat, long = long,
                         Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
        tols = tols, method = method, neigen = neigen)
-      print(summary(ests))
       boot_sd <- sd(ests)
       return(list('est' = (solve(t(design) %*% Sigmainvgp %*% design) %*% t(design) %*% Sigmainvgp %*% Y)['Z',], 
                   'boot_sd' = boot_sd))
@@ -221,11 +214,7 @@ fit_method <- function(Y,
     if (boot){
       ests <- boot_func(Y=Y, X=X, Z=Z, 
                         Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
-                        Sigmainvre = Sigmainvre, 
-                        Sigmainvcar = Sigmainvcar, 
-                        Sigmainvgp = Sigmainvgp,
-                        lat = lat,
-                        long = long,
+                        Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
        tols = tols, method = method, neigen = neigen)
       boot_sd <- sd(ests)
       return(list('est' = sum(sbwatttun_object$dat_weights$sbw_weights[Z == 1]*Y[Z == 1]) - 
@@ -256,42 +245,6 @@ fit_method <- function(Y,
     return(sum(sbwatttun_object$dat_weights$sbw_weights[Z == 1]*Y[Z == 1]) - 
              sum(sbwatttun_object$dat_weights$sbw_weights[Z == 0]*Y[Z == 0]))
   }
-  
-  if ('spatialcoord' == method){
-    outcomemod0 <- SuperLearner::SuperLearner(Y = Y[Z == 0], 
-                                             X = cbind.data.frame(X[Z == 0,], 
-                                                                  lat = lat[Z == 0], 
-                                                                  long = long[Z == 0]),
-                                             SL.library = c("SL.earth", 
-                                                            "SL.gam", 
-                                                            "SL.glm", 
-                                                            "SL.glm.interaction", 
-                                                            "SL.mean"),
-                                             newX = cbind.data.frame(X, lat, long))
-    pimod <- SuperLearner::SuperLearner(Y = Z, 
-                                        X = cbind.data.frame(X, lat, long),
-                                        SL.library = c("SL.earth",
-                                                       "SL.gam",
-                                                       "SL.glm",
-                                                       "SL.glm.interaction",
-                                                       "SL.mean"),                                         family = binomial())
-    # estimate the ATT 
-    predY <- outcomemod0$SL.predict
-    predpi <- pimod$SL.predict
-    tauhat <- (sum(Y*Z - (Y*(1-Z)*predpi + predY*(Z-predpi))/(1-predpi)))/sum(Z)
-    
-    if (boot){
-      ests <- boot_func(Y=Y, X=X, Z=Z, 
-                        Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
-                        lat = lat, long = long,
-                        Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
-                        tols = tols, method = method, neigen = neigen)
-      boot_sd <- sd(ests)
-      return(list('est' = tauhat, 
-                  'boot_sd' = boot_sd))
-    }
-    return(list('est' = tauhat))
-  }
 }
 
 simfunc <- function(nsims = 1000,
@@ -311,11 +264,9 @@ simfunc <- function(nsims = 1000,
                     Ecar = NULL,
                     Vgp = NULL,
                     Egp = NULL,
-                    lat = NULL,
-                    long = NULL,
                     smoothing = c('clusterbased', 'adjacencybased', 'distancebased'),
                     outcomemod = c('linear', 'linearinteraction', 'nonlinearinteraction'),
-                    methods = c('spatialcoord')) { # 'OLS', 'RE', 'CAR', 'GP', 'SW', 'UW', 
+                    methods = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW')) {
   # nsims is the number of simulations
   # X is the design matrix including intercept
   # Z is the binary treatment vector
@@ -384,9 +335,7 @@ simfunc <- function(nsims = 1000,
         Sigmainvre = Sigmainvre,
         Sigmainvcar = Sigmainvcar,
         Sigmainvgp = Sigmainvgp,
-        method = method,
-        lat = lat,
-        long = long
+        method = method
       )
       
     }
@@ -510,7 +459,7 @@ calculate_optimal_tolerances <- function(X,
 boot_func <- function(Y,
                       X,
                       Z,
-                      bootreps = 500,
+                      bootreps = 100,
                       Vre = NULL,
                       Vcar = NULL,
                       Vgp = NULL,
@@ -518,9 +467,7 @@ boot_func <- function(Y,
                       Sigmainvcar = NULL,
                       Sigmainvgp = NULL,
                       tols = NULL,
-                      lat = NULL,
-                      long = NULL,
-                      method = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW', 'spatialcoord'),
+                      method = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW'),
                       neigen = 50){
   method <- match.arg(method)
   n <- length(Y)
@@ -554,8 +501,6 @@ boot_func <- function(Y,
                  Sigmainvgp  = Sigmainvgpb,
                  tols        = tols,
                  method      = method,
-                 lat         = lat,
-                 long        = long,
                  neigen      = neigen)$est
     }, error = function(e) {
       warning(sprintf("bootstrap sample %d failed: %s — skipping", b, e$message))
@@ -605,37 +550,4 @@ balance_table <- function(w, X, Z){
     df[i, 'treated']     <- sum(X[Z == 1, i] * w[Z == 1]) / sum(w[Z == 1]) # should be the same as before weighting
   }
   return(df)
-}
-
-plot_with_insets <- function(giant_plot){
-  # giant_plot is a ggplot object with the entire US
-  # returns a ggdraw object with mainland, Alaska, and Hawaii insets
-  mainland_plot <- giant_plot + coord_sf(xlim = c(-125, -65), ylim = c(25, 50))
-  alaska_plot <- giant_plot + coord_sf(xlim = c(-180, -127), ylim = c(50, 72)) + 
-    theme(legend.position = "none", plot.title = element_blank())
-  hawaii_plot <- giant_plot + coord_sf(xlim = c(-160, -154), ylim = c(18, 25)) + 
-    theme(legend.position = "none", plot.title = element_blank())
-  g <- ggdraw(mainland_plot) +
-    draw_plot(alaska_plot, width = 0.26, height = 0.26 * 10/6 * 0.8, 
-              x = 0, y = -0.03) +
-    draw_plot(hawaii_plot, width = 0.15, height = 0.15 * 10/6 * 0.8, 
-              x = 0.2, y = 0)
-  return(g)
-}
-
-moran_adhoc <- function(x, Wmat, coeff){
-  # x is a vector of values
-  # Wmat is the spatial weights matrix
-  # coeff is normalizing coeff
-  
-  x_centered <- x - mean(x)
-  num <- sum(x_centered * (Wmat %*% x_centered))
-  denom <- sum(x_centered^2)
-  
-  moran_I <- num / denom
-  
-  # Adjust Moran's I by the coefficient
-  moran_adjusted <- moran_I * coeff
-  
-  return(moran_adjusted)
 }
