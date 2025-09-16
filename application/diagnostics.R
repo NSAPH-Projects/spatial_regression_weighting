@@ -133,10 +133,10 @@ g <- ggplot() +
   geom_point(
     data     = filter(pts, Z == 0),
     aes(X, Y, fill = CARiw, shape = factor(Z)),
-    size     = 1.5, 
+    size = 0.75, 
     stroke   = 0.25, 
     color    = "black",
-    position = position_nudge(x = 0.15, y = 0)  # ← correct placement
+    position = position_nudge(x = 0, y = 0)  # ← correct placement
   ) +
   scale_fill_gradient2(low = "dodgerblue", mid = "white", high = "orange", midpoint = 0, 
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 0,]$CARiw, na.rm = TRUE), 
@@ -150,7 +150,7 @@ g <- ggplot() +
   # Treated group (Z == 1): Green triangle with black outline
   geom_sf(data = buffers_merged_geo[buffers_merged_geo$Z == 1,], 
           aes(fill = CARiw, shape = factor(Z)), 
-          size = 1.5, stroke = 0.25, color = "black") +  
+          size = 0.75, stroke = 0.25, color = "black") +  
   
   scale_fill_gradient2(low = "orange", mid = "white", high = "dodgerblue", midpoint = 0, 
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 1,]$CARiw, na.rm = TRUE), 
@@ -178,14 +178,14 @@ g <- ggplot() +
 
 gCAR <- plot_with_insets(g)
 gCAR <- ggdraw(gCAR) +   
-  draw_plot(g + coord_sf(xlim = c(-80.5,-79.5), ylim = c(25.5,26.5)) + 
+  draw_plot(g + coord_sf(xlim = c(-112.5,-111.3), ylim = c(40.4,41.3)) + 
                                      theme(legend.position = "none",
                                            plot.title = element_blank(),
                                            plot.background = element_rect(color = "black", linewidth = 1)#, # Add outline
                                            #panel.background = element_rect(fill = "white")
                                            # Add some margin around the inset
                                      ), 
-                                   x = 0.5, y = 0.15, width = 0.2, height = 0.15, scale = 1.5)
+                                   x = -0.049, y = 0.15, width = 0.2, height = 0.15, scale = 1.5)
 # Plot  FE
 buffers_merged_geo <- buffers_merged_geo[order(buffers_merged_geo$REiw),]
 g <- ggplot() +
@@ -201,10 +201,10 @@ g <- ggplot() +
   geom_point(
     data     = filter(pts, Z == 0),
     aes(X, Y, fill = REiw, shape = factor(Z)),
-    size     = 1.5, 
+    size = 0.75, 
     stroke   = 0.25, 
     color    = "black",
-    position = position_nudge(x = 0.15, y = 0)  # ← correct placement
+    position = position_nudge(x = 0, y = 0)  # ← correct placement
   ) +
   
   scale_fill_gradient2(low = "dodgerblue", mid = "white", high = "orange", midpoint = 0, 
@@ -219,7 +219,7 @@ g <- ggplot() +
   # Treated group (Z == 1): Green triangle with black outline
   geom_sf(data = buffers_merged_geo[buffers_merged_geo$Z == 1,], 
           aes(fill = REiw, shape = factor(Z)),
-          size = 1.5, stroke = 0.25, color = "black") +  
+          size = 0.75, stroke = 0.25, color = "black") +  
   
   scale_fill_gradient2(low = "orange", mid = "white", high = "dodgerblue", midpoint = 0, 
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 1,]$REiw, na.rm = TRUE), 
@@ -247,14 +247,14 @@ g <- ggplot() +
 
 gRE <- plot_with_insets(g)
 gRE <- ggdraw(gRE) +   
-  draw_plot(g + coord_sf(xlim = c(-80.5,-79.5), ylim = c(25.5,26.5)) + 
+  draw_plot(g + coord_sf(xlim = c(-112.5,-111.3), ylim = c(40.4,41.3)) + 
               theme(legend.position = "none",
                     plot.title = element_blank(),
                     plot.background = element_rect(color = "black", linewidth = 1)#, # Add outline
                     #panel.background = element_rect(fill = "white")
                     # Add some margin around the inset
               ), 
-            x = 0.5, y = 0.15, width = 0.2, height = 0.15, scale = 1.5)
+            x = -0.049, y = 0.15, width = 0.2, height = 0.15, scale = 1.5)
 # Plot  GP
 buffers_merged_geo <- buffers_merged_geo[order(buffers_merged_geo$GPiw),]
 g <- ggplot() +
@@ -269,10 +269,10 @@ g <- ggplot() +
   geom_point(
     data     = filter(pts, Z == 0),
     aes(X, Y, fill = GPiw, shape = factor(Z)),
-    size     = 1.5, 
+    size = 0.75, 
     stroke   = 0.25, 
     color    = "black",
-    position = position_nudge(x = 0.15, y = 0)  # ← correct placement
+    position = position_nudge(x = 0, y = 0)  # ← correct placement
   ) +
 
   scale_fill_gradient2(low = "dodgerblue", mid = "white", high = "orange", midpoint = 0, 
@@ -287,7 +287,7 @@ g <- ggplot() +
   # Treated group (Z == 1): Green triangle with black outline
   geom_sf(data = buffers_merged_geo[buffers_merged_geo$Z == 1,],
           aes(fill = GPiw, shape = factor(Z)),
-          size = 1.5, stroke = 0.25, color = "black") +
+          size = 0.75, stroke = 0.25, color = "black") +
   
   scale_fill_gradient2(low = "orange", mid = "white", high = "dodgerblue", midpoint = 0,
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 1,]$GPiw, na.rm = TRUE), 
@@ -314,16 +314,17 @@ g <- ggplot() +
   )
 gGP <- plot_with_insets(g)
 gGP <- ggdraw(gGP) +   
-  draw_plot(g + coord_sf(xlim = c(-80.5,-79.5), ylim = c(25.5,26.5)) + 
+  draw_plot(g + coord_sf(xlim = c(-112.5,-111.3), ylim = c(40.4,41.3)) + 
               theme(legend.position = "none",
                     plot.title = element_blank(),
                     plot.background = element_rect(color = "black", linewidth = 1)#, # Add outline
                     #panel.background = element_rect(fill = "white")
                     # Add some margin around the inset
               ), 
-            x = 0.5, y = 0.15, width = 0.2, height = 0.15, scale = 1.5)
+            x = -0.049, y = 0.15, width = 0.2, height = 0.15, scale = 1.5)
 
-png('images/impliedweights_us.png', width = 1500, height = 2000, res = 230)
+#png('images/impliedweights_us.png', width = 1500, height = 2000, res = 230)
+png('images/impliedweights_us.png', width = 1900, height = 2500, res = 400)
 grid.arrange(gRE, gCAR, gGP, ncol = 1)
 dev.off()
 
@@ -726,22 +727,24 @@ g1 <- ggplot(buffers_merged_geo, aes(x = prop_neighbors_opposite, y = abs(CARiw)
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5)) 
 
-# Calculate the average distance of control neighbors for each treated unit and the average distance of treated neighbors for each control unit
-max_distance_opposite <- rep(NA, nrow(buffers_merged_geo))
+# Calculate the proportion of control neighbors each treated unit has and the number of treated neighbors that each control unit has
+prop_distanceneighbors_opposite <- rep(NA, nrow(buffers_merged_geo))
 for (i in 1:nrow(buffers_merged_geo)) {
   if (buffers_merged_geo$Z[i] == 1) {
-    max_distance_opposite[i] <- max(dmat[i,buffers_merged_geo$Z == 0])/max(dmat[i,])
+    prop_distanceneighbors_opposite[i] <- sum(dmat[i,buffers_merged_geo$Z == 0] < 200)/sum(dmat[i,] < 200) #/1000
   } else {
-    max_distance_opposite[i] <- max(dmat[i,buffers_merged_geo$Z == 1])/max(dmat[i,])
+    prop_distanceneighbors_opposite[i] <- sum(dmat[i,buffers_merged_geo$Z == 1] < 200)/sum(dmat[i,] < 200) #/1000
   }
 }
-# g2 <- ggplot(buffers_merged_geo, aes(x = max_distance_opposite, y = abs(GPiw))) +
-#   geom_point() +
-#   labs(title = "Gaussian Process",
-#        x = "Maximum Distance to Neighbors with the Opposite Treatment Status",
-#        y = "absolute implied weight") +
-#   theme(plot.title = element_text(hjust = 0.5)) +
-#   theme_minimal()
+
+g2 <- ggplot(buffers_merged_geo, 
+             aes(x = prop_distanceneighbors_opposite, y = abs(GPiw))) + # 
+  geom_point() +
+  labs(title = "Gaussian Process",
+       x = "Proportion of sites within 200km with the opposite treatment status",
+       y = "absolute implied weight") +
+  theme_minimal() + 
+  theme(plot.title = element_text(hjust = 0.5))
 
 # Calculate the proportion of control units in a cluster for each treated unit and the proportion of treated units in a cluster for each control unit
 prop_cluster_opposite <- rep(NA, nrow(buffers_merged_geo))
@@ -760,6 +763,6 @@ g3 <- ggplot(buffers_merged_geo, aes(x = prop_cluster_opposite, y = abs(REiw))) 
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))
 
-png('images/weights_properties.png', width = 700, height = 1000, res = 130)
-grid.arrange(g3,g1, ncol = 1)
+png('images/weights_properties.png', width = 700, height = 1500, res = 130)
+grid.arrange(g3,g1,g2, ncol = 1)
 dev.off()
