@@ -65,7 +65,6 @@ buffers_original_crs <- st_transform(buffers, crs = st_crs(data_sf))
 st_write(buffers_original_crs, "shapefiles/buffers_2k.shp")
 
 #################### 2: Confounder data ###################
-#census_api_key("ff4b9c35f317b4718d387706005f65987329e82b", install = T, overwrite = T)
 
 # Read in fips_codes
 data(fips_codes)
