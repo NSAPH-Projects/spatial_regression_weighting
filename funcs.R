@@ -1,3 +1,82 @@
+plot_with_insets <- function(giant_plot){
+  # giant_plot is a ggplot object with the entire US
+  # returns a ggdraw object with mainland, Alaska, and Hawaii insets
+  mainland_plot <- giant_plot + coord_sf(xlim = c(-125, -65), ylim = c(25, 50))
+  alaska_plot <- giant_plot + coord_sf(xlim = c(-180, -127), ylim = c(50, 72)) + 
+    theme(legend.position = "none", plot.title = element_blank())
+  hawaii_plot <- giant_plot + coord_sf(xlim = c(-160, -154), ylim = c(18, 25)) + 
+    theme(legend.position = "none", plot.title = element_blank())
+  g <- ggdraw(mainland_plot) +
+    draw_plot(alaska_plot, width = 0.26, height = 0.26 * 10/6 * 0.8, 
+              x = 0, y = -0.03) +
+    draw_plot(hawaii_plot, width = 0.15, height = 0.15 * 10/6 * 0.8, 
+              x = 0.2, y = 0)
+  return(g)
+}
+
+get_ra_started_date <- function(url) {
+  # Read page safely
+  pg <- tryCatch(read_html(url, options = "HUGE"), error = function(e) return(NA_character_))
+  if (inherits(pg, "character")) return(pg)
+  
+  # Base XPath for the schedule table
+  table_xpath <- paste0(
+    "//table[ (thead/tr/th[1][normalize-space()='Milestone'] and thead/tr/th[2][normalize-space()='Date(s)'])",
+    " or (tr[1]/th[1][normalize-space()='Milestone'] and tr[1]/th[2][normalize-space()='Date(s)']) ]"
+  )
+  
+  # Function to extract the Date(s) text for a given milestone
+  get_date_for_milestone <- function(milestone) {
+    xp <- paste0(table_xpath, "//tr[td[1][normalize-space()='", milestone, "']]/td[2]")
+    nd <- xml_find_first(pg, xp)
+    if (is.na(nd)) return(NA_character_)
+    txt <- xml_text(nd, trim = TRUE)
+    if (nzchar(txt)) txt else NA_character_
+  }
+  
+  # Try Remedial Action Started first
+  date_ra <- get_date_for_milestone("Remedial Action Started")
+
+  #date_construction_comp <- get_date_for_milestone("Construction Completed")
+  
+  # If missing, try Final Remedial Action
+  #if (date_construction_comp != "Not Yet Achieved" & !(startsWith(date_construction_comp, "Estimated")) &
+  if (is.na(date_ra)) {
+    date_ra <- get_date_for_milestone("Final Remedial Action Started")
+    if (is.na(date_ra)) {
+      date_ra <- get_date_for_milestone("Construction Completed")
+    }
+  }
+  date_ra
+}
+
+moran_adhoc <- function(x, Wmat, coeff){
+  # x is a vector of values
+  # Wmat is the spatial weights matrix
+  # coeff is normalizing coeff
+  
+  x_centered <- x - mean(x)
+  num <- sum(x_centered * (Wmat %*% x_centered))
+  denom <- sum(x_centered^2)
+  
+  moran_I <- num / denom
+  
+  # Adjust Moran's I by the coefficient
+  moran_adjusted <- moran_I * coeff
+  
+  return(moran_adjusted)
+}
+
+safe_get_ra_started <- function(link) {
+  tryCatch(
+    get_ra_started_date(link),
+    error = function(e) {
+      message("Error for link ", link, ": ", conditionMessage(e))
+      NA_character_
+    }
+  )
+}
+
 gen_U <- function(Z, 
                   noise_sd = 0.1, 
                   clusters = NULL,
