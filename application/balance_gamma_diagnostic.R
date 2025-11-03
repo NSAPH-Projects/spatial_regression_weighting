@@ -1,23 +1,13 @@
-library(alabama)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(sf)
-library(spdep)
 library(rnaturalearth)
 library(rnaturalearthdata)
-library(geosphere)
-library(igraph)
-library(gridExtra)
 library(Matrix)
 library(patchwork)
 library(rlang)
-library(xtable)
-library(tools)
-library(ggnewscale)
 library(cowplot)
-library(MASS)
-library(akima)
 library(nloptr)
 
 source('../funcs.R')
@@ -29,8 +19,9 @@ states <- st_read('../data/tl_2010_us_state10/tl_2010_us_state10.shp')
 load('../data/preprocessed_superfunds.RData')
 us_states <- ne_states(country = "United States of America", returnclass = "sf")
 
-X[,2:12] <- scale(X[,2:12])
+X[,2:ncol(X)] <- scale(X[,2:ncol(X)])
 X <- as.matrix(X)
+n <- nrow(X)
 
 statefactor <- factor(clusters)
 Jks = list()
@@ -59,13 +50,19 @@ v_max <- eig_S$vectors[, which.max(eig_S$values)]
 cat("Feasible range for k is roughly from", lambda_min, "to", lambda_max, "\n")
 
 k_vals <- seq(lambda_min+0.1, lambda_max, length.out = 20)
+# Remove the last k_vals
+k_vals <- k_vals[k_vals < lambda_max]
+
 dfre <- data.frame(
   k_vals = k_vals,
   moran = k_vals / lambda_max,
   abs_imbalance = rep(NA, length(k_vals))
 )
 # Loop over each k value.
+
+k_vals <- sort(dfre$k_vals)
 start_time <- Sys.time()
+
 for (i in seq_along(k_vals)) {
   k_val <- dfre$k_vals[i]
   
@@ -130,6 +127,7 @@ for (i in seq_along(k_vals)) {
   cat("  U^T S U =", as.numeric(t(U_opt) %*% S %*% U_opt), " (should equal k =", k_val, ")\n\n")
 }
 print(Sys.time() - start_time)
+save(dfre, file = 'misc_data/dfre.RData')
 
 # Create a data frame with absgamma values
 gamma_df <- data.frame(abs_gamma = seq(0.01, 1, length.out = 20))
@@ -137,36 +135,20 @@ gamma_df <- data.frame(abs_gamma = seq(0.01, 1, length.out = 20))
 # Perform a cross join to expand the data frame
 df_expanded <- merge(dfre, gamma_df, by = NULL)
 df_expanded$abs_cond_bias <- df_expanded$abs_gamma*df_expanded$abs_imbalance
-  
-interp_result <- with(df_expanded, interp(
-  x = moran,
-  y = abs_gamma,
-  z = abs_cond_bias,
-  xo = seq(min(moran), max(moran), length = 400),
-  yo = seq(min(abs_gamma), max(abs_gamma), length = 400),
-  linear = FALSE,    # Use spline (non-linear) interpolation for smoothness
-  extrap = FALSE     # Do not extrapolate beyond the provided data range
-))
 
-# Convert the interpolation result into a data frame that ggplot2 can use
-interp_df <- expand.grid(
-  moran = interp_result$x,
-  abs_gamma = interp_result$y
-)
-interp_df$abs_cond_bias <- as.vector(interp_result$z)
-interp_df$abs_cond_bias[interp_df$abs_cond_bias < 0] <- 0
-custom_breaks <- seq(0, 0.09, by = 0.01)
-
-plot1 <- ggplot(interp_df, aes(x = moran, y = abs_gamma, z = abs_cond_bias)) +
-  geom_contour_filled(breaks = custom_breaks) +
-  scale_fill_viridis_d(drop = FALSE) +
+plot1 <- ggplot(df_expanded, aes(x = moran, y = abs_gamma, fill = abs_cond_bias)) +
+  geom_tile() +
   labs(
     title = "Random Effects Model",
     x = "Moran's I",
     y = expression("|" * gamma * "|"),
     fill = expression(max ~ abs(E(hat(tau)[GLS] ~ "|" ~ (bold(X) * ", " * bold(Z) * ", " * bold(U))) - tau))
   ) +
-  theme_minimal()
+  scale_fill_viridis_c() +
+  theme_minimal() + # increase legend key width
+  theme(
+    legend.key.width = unit(1.5, "cm")
+  )
 
 # CAR
 sigma2 <- 1
@@ -195,6 +177,8 @@ v_max <- eig_S$vectors[, which.max(eig_S$values)]
 
 # Choose a value k in the feasible range, i.e. between lambda_min and lambda_max.
 k_vals <- seq(lambda_min+0.1, lambda_max, length.out = 20)
+# Remove the last k_vals
+k_vals <- k_vals[k_vals < lambda_max]
 
 dfcar <- data.frame(
   k_vals = k_vals,
@@ -265,7 +249,7 @@ for (i in seq_along(k_vals)) {
   cat("  U^T U =", sum(U_opt^2), "\n")
   cat("  U^T S U =", as.numeric(t(U_opt) %*% S %*% U_opt), " (should equal k =", k_val, ")\n\n")
 }
-
+save(dfcar, file = 'misc_data/dfcar.RData')
 
 gamma_df <- data.frame(abs_gamma = seq(0.01, 1, length.out = 20))
 
@@ -273,35 +257,21 @@ gamma_df <- data.frame(abs_gamma = seq(0.01, 1, length.out = 20))
 df_expanded <- merge(dfcar, gamma_df, by = NULL)
 df_expanded$abs_cond_bias <- df_expanded$abs_gamma*df_expanded$abs_imbalance
 
-interp_result <- with(df_expanded, interp(
-  x = moran,
-  y = abs_gamma,
-  z = abs_cond_bias,
-  xo = seq(min(moran), max(moran), length = 400),
-  yo = seq(min(abs_gamma), max(abs_gamma), length = 400),
-  linear = FALSE,    # Use spline (non-linear) interpolation for smoothness
-  extrap = FALSE     # Do not extrapolate beyond the provided data range
-))
-
-# Convert the interpolation result into a data frame that ggplot2 can use
-interp_df <- expand.grid(
-  moran = interp_result$x,
-  abs_gamma = interp_result$y
-)
-interp_df$abs_cond_bias <- as.vector(interp_result$z)
-interp_df$abs_cond_bias[interp_df$abs_cond_bias < 0] <- 0
-
-plot2 <- ggplot(interp_df, aes(x = moran, y = abs_gamma, z = abs_cond_bias)) +
-  geom_contour_filled(breaks = custom_breaks) +
-  scale_fill_viridis_d(drop = FALSE) +
+plot2 <- ggplot(df_expanded, aes(x = moran, y = abs_gamma, fill = abs_cond_bias)) +
+  geom_tile() +
   labs(
     title = "Intrinsic Conditional Autoregressive Model",
     x = "Moran's I",
     y = expression("|" * gamma * "|"),
     fill = expression(max ~ abs(E(hat(tau)[GLS] ~ "|" ~ (bold(X) * ", " * bold(Z) * ", " * bold(U))) - tau))
   ) +
-  theme_minimal()
+  scale_fill_viridis_c() +
+  theme_minimal() + # increase legend key width
+  theme(
+    legend.key.width = unit(1.5, "cm")
+  )
 
+# GP
 kappa <- 10 
 rangec <- 500
 phic <- rangec/(2*sqrt(kappa))
@@ -324,6 +294,9 @@ v_max <- eig_S$vectors[, which.max(eig_S$values)]
 cat("Feasible range for k is roughly from", lambda_min, "to", lambda_max, "\n")
 
 k_vals <- seq(lambda_min+0.1, lambda_max, length.out = 20)
+# Remove the last k_vals
+k_vals <- k_vals[k_vals < lambda_max]
+
 dfgp <- data.frame(
   k_vals = k_vals,
   moran = k_vals / lambda_max,
@@ -395,6 +368,7 @@ for (i in seq_along(dfgp$k_vals)) {
   cat("  U^T S U =", as.numeric(t(U_opt) %*% S %*% U_opt), " (should equal k =", k_val, ")\n\n")
 }
 print(Sys.time() - start_time)
+save(dfgp, file = 'misc_data/dfgp.RData')
 
 gamma_df <- data.frame(abs_gamma = seq(0.01, 1, length.out = 20))
 
@@ -402,36 +376,19 @@ gamma_df <- data.frame(abs_gamma = seq(0.01, 1, length.out = 20))
 df_expanded <- merge(dfgp, gamma_df, by = NULL)
 df_expanded$abs_cond_bias <- df_expanded$abs_gamma*df_expanded$abs_imbalance
 
-interp_result <- with(df_expanded, interp(
-  x = moran,
-  y = abs_gamma,
-  z = abs_cond_bias,
-  xo = seq(min(moran), max(moran), length = 400),
-  yo = seq(min(abs_gamma), max(abs_gamma), length = 400),
-  linear = FALSE,    # Use spline (non-linear) interpolation for smoothness
-  extrap = FALSE
-))
-
-# Convert the interpolation result into a data frame that ggplot2 can use
-interp_df <- expand.grid(
-  moran = interp_result$x,
-  abs_gamma = interp_result$y
-)
-interp_df$abs_cond_bias <- as.vector(interp_result$z)
-interp_df$abs_cond_bias[interp_df$abs_cond_bias < 0] <- 0
-
-plot3 <- ggplot(interp_df, aes(x = moran, y = abs_gamma, z = abs_cond_bias)) +
-  geom_contour_filled(breaks = custom_breaks) +
-  scale_fill_viridis_d(drop = FALSE) +
+plot3 <- ggplot(df_expanded, aes(x = moran, y = abs_gamma, fill = abs_cond_bias)) +
+  geom_tile() +
   labs(
     title = "Gaussian Process Model",
     x = "Moran's I",
     y = expression("|" * gamma * "|"),
     fill = expression(max ~ abs(E(hat(tau)[GLS] ~ "|" ~ (bold(X) * ", " * bold(Z) * ", " * bold(U))) - tau))
   ) +
-  guides(fill = guide_legend(drop = FALSE)) +
-  theme_minimal()  # center title
-
+  scale_fill_viridis_c() +
+  theme_minimal() + # increase legend key width
+  theme(
+    legend.key.width = unit(1.5, "cm")
+  )
 
 combined_plot <- plot1 + plot2 + plot3 +
   plot_layout(guides = 'collect') &
