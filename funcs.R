@@ -174,9 +174,11 @@ fit_method <- function(Y,
                        Sigmainvre = NULL,
                        Sigmainvcar = NULL,
                        Sigmainvgp = NULL,
+                       lat = NULL,
+                       long = NULL,
                        tols = NULL,
                        Xtol = 0,
-                       method = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW'),
+                       method = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'spatialcoord'),
                        neigen = 50,
                        boot = F) {
   
@@ -206,6 +208,7 @@ fit_method <- function(Y,
       ests <- boot_func(Y=Y, X=X, Z=Z, 
                         Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
                         Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
+                        lat = lat, long = long,
        tols = tols, method = method, neigen = neigen)
       boot_sd <- sd(ests)
       return(list('est' = coefficients(ols_model)['Z'], 'boot_sd' = boot_sd))
@@ -219,6 +222,7 @@ fit_method <- function(Y,
       ests <- boot_func(Y=Y, X=X, Z=Z, 
                         Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
                         Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
+                        lat = lat, long = long,
        tols = tols, method = method, neigen = neigen)
       boot_sd <- sd(ests)
       return(list('est' = (solve(t(design) %*% Sigmainvre %*% design) %*% t(design) %*% Sigmainvre %*% Y)['Z',], 
@@ -233,6 +237,7 @@ fit_method <- function(Y,
       ests <- boot_func(Y=Y, X=X, Z=Z, 
                         Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
                         Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
+                        lat = lat, long = long,
        tols = tols, method = method, neigen = neigen)
       boot_sd <- sd(ests)
       return(list('est' = (solve(t(design) %*% Sigmainvcar %*% design) %*% t(design) %*% Sigmainvcar %*% Y)['Z',], 
@@ -247,6 +252,7 @@ fit_method <- function(Y,
       ests <- boot_func(Y=Y, X=X, Z=Z, 
                         Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
                         Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
+                        lat = lat, long = long,
        tols = tols, method = method, neigen = neigen)
       boot_sd <- sd(ests)
       return(list('est' = (solve(t(design) %*% Sigmainvgp %*% design) %*% t(design) %*% Sigmainvgp %*% Y)['Z',], 
@@ -283,9 +289,12 @@ fit_method <- function(Y,
     # bal$bal_sam = 1000
     bal$bal_std <- 'manual'
     bal$bal_alg <- F
+    #print(ncol(X)-1)
     bal$bal_tol <- c(rep(Xtol, ncol(X)-1), tols$RE[1:neigen],
                      tols$CAR[1:neigen], tols$GP[1:neigen])
     #print(bal$bal_tol)
+    #print(length(bal$bal_tol))
+    #print(length(bal$bal_cov))
     stopifnot(length(bal$bal_tol) == length(bal$bal_cov))
     sbwatttun_object = sbw(dat = data_frame, ind = t_ind, bal = bal, 
                            sol = list(sol_nam = "quadprog"), 
@@ -294,6 +303,7 @@ fit_method <- function(Y,
       ests <- boot_func(Y=Y, X=X, Z=Z, 
                         Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
                         Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
+                        lat = lat, long = long,
        tols = tols, method = method, neigen = neigen)
       boot_sd <- sd(ests)
       return(list('est' = sum(sbwatttun_object$dat_weights$sbw_weights[Z == 1]*Y[Z == 1]) - 
@@ -306,30 +316,70 @@ fit_method <- function(Y,
              'weights' = sbwatttun_object$dat_weights$sbw_weights))
   }
   
-  if ('UW'  == method) {
-    t_ind <- Z
-    bal_cov <- as.data.frame(X)
-    #bal_cov <- model.matrix(~.^2, data = bal_cov)
-    colnames(bal_cov) <- paste0('X', 1:ncol(bal_cov))
-    data_frame <- as.data.frame(cbind(t_ind, bal_cov))
-    t_ind <- "t_ind"
-    bal <- list()
-    bal$bal_cov <- colnames(bal_cov)[-1]
-    print(bal$bal_cov)
-    bal$bal_alg = TRUE # tuning algorithm in Wang and Zubizarreta (2020) used for automatically selecting the degree of approximate covariates balance.
-    bal$bal_sam = 1000
-    sbwatttun_object = sbw(dat = data_frame, ind = t_ind, bal = bal,
-                           sol = list(sol_nam = "quadprog"), 
-                           par = list(par_est = "att", par_tar = NULL))
-    return(sum(sbwatttun_object$dat_weights$sbw_weights[Z == 1]*Y[Z == 1]) - 
-             sum(sbwatttun_object$dat_weights$sbw_weights[Z == 0]*Y[Z == 0]))
+  # if ('UW'  == method) {
+  #   t_ind <- Z
+  #   bal_cov <- as.data.frame(X)
+  #   #bal_cov <- model.matrix(~.^2, data = bal_cov)
+  #   colnames(bal_cov) <- paste0('X', 1:ncol(bal_cov))
+  #   data_frame <- as.data.frame(cbind(t_ind, bal_cov))
+  #   t_ind <- "t_ind"
+  #   bal <- list()
+  #   bal$bal_cov <- colnames(bal_cov)[-1]
+  #   # print(bal$bal_cov)
+  #   bal$bal_alg = TRUE # tuning algorithm in Wang and Zubizarreta (2020) used for automatically selecting the degree of approximate covariates balance.
+  #   bal$bal_sam = 1000
+  #   sbwatttun_object = sbw(dat = data_frame, ind = t_ind, bal = bal,
+  #                          sol = list(sol_nam = "quadprog"), 
+  #                          par = list(par_est = "att", par_tar = NULL))
+  #   return(sum(sbwatttun_object$dat_weights$sbw_weights[Z == 1]*Y[Z == 1]) - 
+  #            sum(sbwatttun_object$dat_weights$sbw_weights[Z == 0]*Y[Z == 0]))
+  # }
+  if ('spatialcoord' == method){
+    print(dim(X))
+    print(length(lat))
+    print(length(long))
+    print(length(Y))
+    print(length(Z))
+    outcomemod0 <- SuperLearner::SuperLearner(Y = Y[Z == 0], 
+                                              X = cbind.data.frame(X[Z == 0,], 
+                                                                   lat = lat[Z == 0], 
+                                                                   long = long[Z == 0]),
+                                              SL.library = c("SL.earth", 
+                                                             "SL.gam", 
+                                                             "SL.glm", 
+                                                             "SL.glm.interaction", 
+                                                             "SL.mean"),
+                                              newX = cbind.data.frame(X, lat, long))
+    pimod <- SuperLearner::SuperLearner(Y = Z, 
+                                        X = cbind.data.frame(X, lat, long),
+                                        SL.library = c("SL.earth",
+                                                       "SL.gam",
+                                                       "SL.glm",
+                                                       "SL.glm.interaction",
+                                                       "SL.mean"),                                         family = binomial())
+    # estimate the ATT 
+    predY <- outcomemod0$SL.predict
+    predpi <- pimod$SL.predict
+    tauhat <- (sum(Y*Z - (Y*(1-Z)*predpi + predY*(Z-predpi))/(1-predpi)))/sum(Z)
+    
+    if (boot){
+      ests <- boot_func(Y=Y, X=X, Z=Z, 
+                        Vre =Vre, Vcar = Vcar, Vgp = Vgp, 
+                        lat = lat, long = long,
+                        Sigmainvre = Sigmainvre, Sigmainvcar = Sigmainvcar, Sigmainvgp = Sigmainvgp,
+                        tols = tols, method = method, neigen = neigen)
+      boot_sd <- sd(ests)
+      return(list('est' = tauhat, 
+                  'boot_sd' = boot_sd))
+    }
+    return(list('est' = tauhat))
   }
 }
 
 simfunc <- function(nsims = 1000,
                     X,
                     Z,
-                    beta = c(-0.44,0.46,-0.69,-1.45,0.57,-1.02,-0.02,-0.94,1.10,-0.48,-0.71), 
+                    beta = c(-0.44,0.46,-0.69,-1.45,0.57,-1.02,-0.02,-0.94,1.10,-0.48,-0.71, -0.937, -0.091, -0.576, 0.234, 1.578, 0.936, -0.537), 
                     #V = NULL,
                     Wre = NULL,
                     Wcar = NULL,
@@ -343,9 +393,11 @@ simfunc <- function(nsims = 1000,
                     Ecar = NULL,
                     Vgp = NULL,
                     Egp = NULL,
+                    lat = NULL,
+                    long = NULL,
                     smoothing = c('clusterbased', 'adjacencybased', 'distancebased'),
                     outcomemod = c('linear', 'linearinteraction', 'nonlinearinteraction'),
-                    methods = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW')) {
+                    methods = c('spatialcoord')) { # c('OLS', 'RE', 'CAR', 'GP', 'SW', 
   # nsims is the number of simulations
   # X is the design matrix including intercept
   # Z is the binary treatment vector
@@ -377,7 +429,7 @@ simfunc <- function(nsims = 1000,
   
   for (method in methods) {
     # Create filename for csvs containing estimates
-    filename <- paste0('results_May1/',
+    filename <- paste0('results_Oct30/',
                        smoothing,
                        '_',
                        outcomemod,
@@ -398,15 +450,12 @@ simfunc <- function(nsims = 1000,
         Wgp = Wgp,
         smoothing = smoothing
       )
-      #print(cor(U,Z))
       # Generate outcome
       Y <- gen_Y(X, Z, U, beta = beta, outcomemod = outcomemod)
       tauests[sim] = fit_method(
-        Y,
-        X,
-        Z,
-        U,
-        #V = V,
+        Y=Y,
+        X=X,
+        Z=Z,
         Vre = Vre,
         Vcar = Vcar,
         Vgp = Vgp,
@@ -414,7 +463,9 @@ simfunc <- function(nsims = 1000,
         Sigmainvre = Sigmainvre,
         Sigmainvcar = Sigmainvcar,
         Sigmainvgp = Sigmainvgp,
-        method = method
+        method = method,
+        lat = lat,
+        long = long
       )
       
     }
@@ -472,6 +523,8 @@ compute_ATT_MC <- function(mcreps = 1000,
     Y1 <- gen_Y(X, rep(1, length(Z)), U, beta = beta, outcomemod = outcomemod)
     Y0 <- gen_Y(X, rep(0, length(Z)), U, beta = beta, outcomemod = outcomemod)
     # Fit the model
+    print(mean(Y1[Z == 1]))
+    print(mean(Y0[Z == 1]))
     tauests[rep] <- mean(Y1[Z == 1]) - mean(Y0[Z == 1])
   }
   print(summary(tauests))
@@ -546,7 +599,7 @@ boot_func <- function(Y,
                       Sigmainvcar = NULL,
                       Sigmainvgp = NULL,
                       tols = NULL,
-                      method = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'UW'),
+                      method = c('OLS', 'RE', 'CAR', 'GP', 'SW', 'spatialcoord'),
                       neigen = 50){
   method <- match.arg(method)
   n <- length(Y)
@@ -580,7 +633,9 @@ boot_func <- function(Y,
                  Sigmainvgp  = Sigmainvgpb,
                  tols        = tols,
                  method      = method,
-                 neigen      = neigen)$est
+                 neigen      = neigen,
+                 lat = lat,
+                 long = long)$est
     }, error = function(e) {
       warning(sprintf("bootstrap sample %d failed: %s — skipping", b, e$message))
       NULL
