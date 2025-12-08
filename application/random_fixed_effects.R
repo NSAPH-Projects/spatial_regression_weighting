@@ -16,11 +16,11 @@ us_outline <- ne_countries(scale = "medium", country = "United States of America
 
 buffer_centroids <- st_centroid(buffers)
 
-X[,2:12] <- scale(X[,2:12])
+X[,2:ncol(X)] <- scale(X[,2:ncol(X)])
 X <- as.matrix(X)
 
 # RE model
-clusters <- substr(buffers$S_EPA_I, 1, 2)
+clusters <- substr(buffers$Site_EPA_ID, 1, 2)
 statefactor <- factor(clusters)
 
 # Cluster matrix of indicators
