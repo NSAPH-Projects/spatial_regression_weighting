@@ -1,4 +1,3 @@
-library(tidycensus)
 library(dplyr)
 library(sf)
 library(arcpullr)
@@ -9,10 +8,7 @@ library(mice)
 # For web scraping EPA Superfund schedule pages
 library(rvest)
 library(dplyr)
-library(purrr)
 library(stringr)
-library(janitor)
-library(lubridate)
 library(xml2)
 library(parallel)
 
