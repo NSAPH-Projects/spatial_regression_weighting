@@ -1,10 +1,8 @@
 library(ggplot2)
 library(sf)
-library(spdep)
 library(tidyr)
 library(dplyr)
 library(scales)
-library(stringr)
 
 source('../funcs.R')
 states <- st_read('../data/tl_2010_us_state10/tl_2010_us_state10.shp')

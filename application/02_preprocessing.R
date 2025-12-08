@@ -12,7 +12,6 @@ library(stringr)
 library(xml2)
 library(parallel)
 
-
 setwd('../') # Work in parent directory
 
 ################## 1: Exposure Data ###################
