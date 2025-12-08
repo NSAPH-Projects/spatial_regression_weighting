@@ -214,7 +214,7 @@ desired_order <- c("OLS",
 )
 df2$method <- factor(df2$method, levels = desired_order)
 
-png("results_Oct30/boxplot.png", width = 2880, height = 2400, res = 350)
+png("images/boxplot.png", width = 2880, height = 2400, res = 350)
 # ggplot(df2, aes(x = method, y = estimate, fill = method)) +
 #   geom_boxplot(alpha = 0.5) +
 #   facet_grid(
