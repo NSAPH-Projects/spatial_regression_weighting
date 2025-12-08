@@ -10,7 +10,7 @@ for smoothing in "${smoothings[@]}"; do
   sbatch --job-name=${smoothing}_${outcomemod}\
     --output=output/${smoothing}_${outcomemod}.out \
     --error=error/${smoothing}_${outcomemod}.err \
-    run_job.sh 500 "$smoothing" "$outcomemod"  
+    run_job.sh 1000 "$smoothing" "$outcomemod"  
   sleep 1 # pause to be kind to the scheduler
   done
 done

@@ -6,6 +6,7 @@ library(ggplot2)
 library(sbw)
 library(sf)
 library(MASS)
+library(cowplot)
 source('../funcs.R')
 
 # Import geographies
@@ -14,12 +15,11 @@ states <- st_read('../data/tl_2010_us_state10/tl_2010_us_state10.shp')
 set.seed(1234)
 # Read in X and Z data
 load('../data/preprocessed_superfunds.RData')
-lat <- buffers$Latitud
-long <- buffers$Longitd
+lat <- buffers$Latitude
+long <- buffers$Longitude
 n <- nrow(buffers)
 X <- st_drop_geometry(X)
-X[,2:11] <- scale(X[,2:11])
-X <- X[,-12]
+X[,2:ncol(X)] <- scale(X[,2:ncol(X)])
 X <- as.matrix(X)
 kappa <- 10 
 rangec <- 500
@@ -52,7 +52,7 @@ E <- eigen(S)
 Ecar <- Re(E$values)
 Vcar <- Re(E$vectors)
 E <- eigen(adjacency_matrix)
-Wcar <- E$vectors %*% diag(E$values^100) %*% t(E$vectors)
+Wcar <- E$vectors %*% diag(E$values^100) %*% t(E$vectors) # 100
 Sigma <- diag(n) + 10*S
 Sigmainvcar <- solve(Sigma)
 
@@ -60,7 +60,6 @@ Sigmainvcar <- solve(Sigma)
 simlist <- list(
   'X' = X,
   'Z' = Z,
-  #'V' = V,
   'Vre' = Vre,
   'Ere' = Ere,
   'Vcar' = Vcar,
@@ -168,7 +167,7 @@ g <- ggplot() +
   scale_shape_manual(values = c("0" = 21, "1" = 24),
                      guide = "none") +
   # relabel the fill legend:
-  scale_fill_viridis_c(name = "U", limits = c(0.03, 0.16)) +
+  scale_fill_viridis_c(name = "U") +
   labs(
     x = "Longitude",
     y = "Latitude"
