@@ -44,3 +44,5 @@ application/outcome_results/*
 deletelater.R
 *nj.R
 application/README_for_dataverse.md
+application/globus_export*
+application/birth_counts_vs_cdc_wonder*
