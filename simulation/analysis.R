@@ -13,7 +13,7 @@ source('../funcs.R')
 load('sim.RData')
 
 # read in results files
-csvs <- list.files('results_May1/', pattern = '.csv')
+csvs <- list.files('results_Oct30/', pattern = '.csv')
 
 # Create storage for metrics 
 analysisdf <- data.frame(
@@ -33,14 +33,13 @@ method <- gsub(".*_([^\\.]+)\\.csv", "\\1", csvs)
 # Precompute true estimand for each outcome model and confounding mechanism
 # ATTs <- data.frame(expand.grid(smoothing = c('clusterbased', 'adjacencybased', 'distancebased'),
 #                                  outcomemod = c('linear', 'linearinteraction', 'nonlinearinteraction')))
-# ATTs$theta <- NA
 # ATTs$smoothing <- as.character(ATTs$smoothing)
 # ATTs$outcomemod <- as.character(ATTs$outcomemod)
 # 
 # ATTs$tau <- unlist(mclapply(1:nrow(ATTs), function(i) {
-#   compute_ATT_MC(X = X,
-#                  Z = Z,
-#                  beta = c(-0.44,0.46,-0.69,-1.45,0.57,-1.02,-0.02,-0.94,1.10,-0.48,-0.71),
+#   compute_ATT_MC(X = as.matrix(simlist$X),
+#                  Z = simlist$Z,
+#                  beta = c(-0.44,0.46,-0.69,-1.45,0.57,-1.02,-0.02,-0.94,1.10,-0.48,-0.71, -0.937, -0.091, -0.576, 0.234, 1.578, 0.936, -0.537), 
 #                  Wre = simlist$Wre,
 #                  Wcar = simlist$Wcar,
 #                  Wgp = simlist$Wgp,
@@ -49,9 +48,9 @@ method <- gsub(".*_([^\\.]+)\\.csv", "\\1", csvs)
 #                 )
 # }, mc.cores = 2))  # Adjust the number of cores
 # ATTs
-# save(ATTs, file = 'results_May1/ATTs.RData')
+# save(ATTs, file = 'results_Oct30/ATTs.RData')
 
-load('results_May1/ATTs.RData')
+load('results_Oct30/ATTs.RData')
                 
 # Loop through results to calculate metrics and create plots.
 for (i in 1:length(csvs)){
@@ -61,7 +60,7 @@ for (i in 1:length(csvs)){
   analysisdf$smoothing[i] <- smoothing[i]
   analysisdf$outcomemod[i] <- outcomemod[i]
   analysisdf$method[i] <- method[i]
-  df_temp <- read.csv(file.path('results_May1/', filename))
+  df_temp <- read.csv(file.path('results_Oct30/', filename))
   tauests <- df_temp 
   # Convert muests to a vector, it's just a single column
   tauests <- as.vector(as.matrix(tauests))
@@ -88,7 +87,7 @@ analysisdf_bias <- analysisdf %>%
 # Pivot wider from the original analysisdf
 analysisdf_bias <- analysisdf_bias[, c(1:4)] %>% 
   pivot_wider(names_from = method, values_from = bias)
-analysisdf_bias <- analysisdf_bias[, c("smoothing", "outcomemod", "OLS", "RE", "CAR", "GP", "spatialcoord", "SW"
+analysisdf_bias <- analysisdf_bias[, c("smoothing", "outcomemod", "OLS", "RE", "CAR", "GP", "spatialcoord", "SW"  
                                        )]
 
 # Print using xtable and prevent xtable from reformatting the already-formatted text
@@ -113,7 +112,7 @@ print(xtable(analysisdf_RMSE), include.rownames = F, sanitize.text.function = id
 
 # Create facet_wrap boxplots with ggplot2
 
-folder <- "results_May1"
+folder <- "results_Oct30"
 
 # List all CSV files in that folder (with full paths)
 files <- list.files(folder, pattern = "\\.csv$", full.names = TRUE)
@@ -126,12 +125,11 @@ read_estimates <- function(i) {
   smoothing <- smoothing[i]
   outcomemod <- outcomemod[i]
   method <- method[i]
-  dat <- read.csv(file.path('results_May1/', filename))
-
-  # If the CSV doesn't have a header and just one column, name it "estimate"
-  if (!"estimate" %in% colnames(dat)) {
-    names(dat)[1] <- "estimate"
-  }
+  df <- read.csv(file.path('results_Oct30/', filename))
+  # Initalize empty dataframe dat
+  dat <- data.frame(estimate = numeric(ncol(df)))
+  # Convert to a vector
+  dat$estimate <- as.matrix(df)[1,]
   # Add the new columns
   dat <- dat %>%
     mutate(smoothing = smoothing,
@@ -216,7 +214,7 @@ desired_order <- c("OLS",
 )
 df2$method <- factor(df2$method, levels = desired_order)
 
-png("images/boxplot.png", width = 2880, height = 2400, res = 350)
+png("results_Oct30/boxplot.png", width = 2880, height = 2400, res = 350)
 # ggplot(df2, aes(x = method, y = estimate, fill = method)) +
 #   geom_boxplot(alpha = 0.5) +
 #   facet_grid(
