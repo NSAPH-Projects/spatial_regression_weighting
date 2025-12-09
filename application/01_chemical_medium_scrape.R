@@ -3,10 +3,14 @@ library(readxl)
 library(dplyr)
 library(PeriodicTable)
 
-# https://semspub.epa.gov/src/document/HQ/406171
 # https://www.epa.gov/superfund/superfund-data-and-reports
 # Read in contaminants of concern xlsx
-chemical_medium <- read_excel("data/contaminants_of_concern.xlsx")
+
+url <- 'https://semspub.epa.gov/src/document/HQ/406203'
+tmp <- tempfile(fileext = ".xlsx")
+
+download.file(url, destfile = tmp, mode = "wb")
+chemical_medium <- read_xlsx(tmp)
 
 # Remove first row, assign second row to column names
 colnames(chemical_medium) <- as.character(chemical_medium[1, ])
