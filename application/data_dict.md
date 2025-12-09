@@ -26,7 +26,7 @@ A data frame of covariates for each buffer around a Superfund site.
 | percent_black | numeric | proportion (0–1) | Area-weighted mean Black proportion. |
 | percent_indigenous | numeric | proportion (0–1) | Area-weighted mean American Indian/Alaska Native proportion. |
 | percent_asian | numeric | proportion (0–1) | Area-weighted mean Asian proportion. |
-| percent_renter_occupied | proportion (0–1) | Area-weighted mean proportion of renter-occupied housing units. |
+| percent_renter_occupied | numeric | proportion (0–1) | Area-weighted mean proportion of renter-occupied housing units. |
 | median_household_income | numeric | US dollars | Area-weighted median household income. |
 | median_house_value | numeric | US dollars | Area-weighted median house value. |
 | percent_poverty | numeric | proportion (0–1) | Area-weighted mean poverty rate. |
@@ -83,7 +83,7 @@ An `sf` and `data.frame` object of 2-km buffer polygons around Superfund site ar
 | percent_white | numeric | proportion (0–1) | Area-weighted mean White proportion. |
 | percent_indigenous | numeric | proportion (0–1) | Area-weighted mean American Indian/Alaska Native proportion. |
 | percent_asian | numeric | proportion (0–1) | Area-weighted mean Asian proportion. |
-| percent_renter_occupied | proportion (0–1) | Area-weighted mean proportion of renter-occupied housing units. |
+| percent_renter_occupied | numeric | proportion (0–1) | Area-weighted mean proportion of renter-occupied housing units. |
 | median_household_income | numeric | US dollars | Area-weighted median household income. |
 | median_house_value | numeric | US dollars | Area-weighted median house value. |
 | percent_poverty | numeric | proportion (0–1) | Area-weighted mean poverty rate. |
