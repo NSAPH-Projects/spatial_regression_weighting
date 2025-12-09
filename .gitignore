@@ -50,3 +50,5 @@ deletelater.R
 application/README_for_dataverse.md
 application/globus_export*
 acc*
+!data/nhgis0002_csv/
+!data/nhgis0002_csv/*.txt
