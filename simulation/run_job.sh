@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -c 1 # Request 8 cores for parallel processing
+#SBATCH -c 1 # Request 1 core only
 #SBATCH -t 00-08:00:00 # Amount of time needed DD-HH:MM:SS
 #SBATCH -p shared # Partition to submit to
 #SBATCH --mem=6000 # Memory
