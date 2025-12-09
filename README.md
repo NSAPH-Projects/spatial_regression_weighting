@@ -7,10 +7,10 @@ This repository contains the code for the simulation and data application sectio
 - `application` contains the code for the data application section of the paper. 
 
 ### Data
-We link publicly available U.S. Environmental Protection Agency information on 1,429 Superfund sites with high-resolution 1990 Census covariates and Medicaid birth outcomes from 2016–2018. We define a binary exposure indicating whether a site was remediated between 1991 and 2015. For each site and its 2-km buffer, we assemble eleven sociodemographic covariates, five indicators of contaminant types, and site scores. Exposure and confounders are publicly available on Harvard Dataverse at https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/EKSCCU. Birth outcomes (the percentages of small vulnerable newborns and congenital anomalies) are aggregated from zip code tabulation area-level Medicaid claims, yielding a final analytic sample of 1,079 sites. Medicaid claims data is stored on the Harvard Regulated Data Environment and is not publicly available. 
+We link publicly available U.S. Environmental Protection Agency information on 1,429 Superfund sites with high-resolution 1990 Census covariates and Medicaid birth outcomes from 2016–2018. We define a binary exposure indicating whether a site was remediated between 1991 and 2015. For each site and its 2-km buffer, we assemble eleven sociodemographic covariates, five indicators of contaminant types, and site scores. Exposure and confounders are publicly available on Harvard Dataverse at https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/EKSCCU. Birth outcomes (the percentages of small vulnerable newborns and congenital anomalies) are aggregated from zip code tabulation area-level Medicaid claims, yielding a final analytic sample of 1,079 Superfund sites. Medicaid claims data is stored on the Harvard Regulated Data Environment and is not publicly available. 
 
 ### Acknowledgements
-The simulations in this paper were run on the FASRC cluster supported by the FAS Division of Science Research Computing Group at Harvard University. 
+We are grateful to Shreya Nalluri, Amruta Nori-Sarma, Mary Willis, and Flannery Black-Ingersoll for their thoughtful discussions on Medicaid birth outcome data. The simulations in this paper were run on the FASRC cluster supported by the FAS Division of Science Research Computing Group at Harvard University. 
  
 ### Paper
 The paper associated with this repository is available on arXiv:
@@ -18,6 +18,7 @@ The paper associated with this repository is available on arXiv:
 
 ### Workflow for reproducibility
 To reproduce the results in the paper, please follow these steps. 
+
 0. Download publicly available data:
    - Download 1990 census tract shapefiles and the following variables from the 1990 Decennial Census via [NHGIS](https://catalog.data.gov/dataset/census-tracts-in-1990/resource/18c7c256-0b30-41e0-887e-5b0b2ce2dc20): total population, population of individuals identifying as Hispanic, Black, Indigenous, or Asian, median household income, median house value, percentage below the poverty line, tenure status, population with a high school diploma, and the median year of housing construction. See codebooks in `data/nhgis0002_csv` for specific variable names. Save all files in the `data/` folder.
    - Additionally download the excel file [Contaminant of Concern Document 406203](https://www.epa.gov/superfund/superfund-data-and-reports) and save as `data/contaminants_of_concern.xlsx`.
