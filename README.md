@@ -9,6 +9,17 @@ This repository contains the code for the simulation and data application sectio
 ### Data
 We link publicly available U.S. Environmental Protection Agency information on 1,429 Superfund sites with high-resolution 1990 Census covariates and Medicaid birth outcomes from 2016–2018. We define a binary exposure indicating whether a site was remediated between 1991 and 2015. For each site and its 2-km buffer, we assemble eleven sociodemographic covariates, five indicators of contaminant types, and site scores. Exposure and confounders are publicly available on Harvard Dataverse at https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/EKSCCU. Birth outcomes (the percentages of small vulnerable newborns and congenital anomalies) are aggregated from zip code tabulation area-level Medicaid claims, yielding a final analytic sample of 1,079 Superfund sites. Medicaid claims data is stored on the Harvard Regulated Data Environment and is not publicly available. 
 
+### Data Citations
+  - U.S. Census Bureau (1991), 1990 Decennial Census, Summary Tape Files 1 and 3A (STF1 and 3A).
+  - Jonathan Schroeder, David Van Riper, Steven Manson, Katherine Knowles, Tracy Kugler, Finn Roberts, and Steven Ruggles. 
+        IPUMS National Historical Geographic Information System: Version 20.0 
+        [dataset]. Minneapolis, MN: IPUMS. 2025. 
+        http://doi.org/10.18128/D050.V20.0
+  - U.S. Environmental Protection Agency (2025). Superfund National Priorities List (NPL) Where you Live Map. ArcGIS Feature Service. https://epa.maps.arcgis.com/apps/webappviewer/index.html?id=33cebcdfdd1b4c3a8b51d416956c41f1
+  - U.S. Environmental Protection Agency (2025). Contaminant of Concern Data for Decision Documents by Media, FYs 1981-2024 (Final NPL, Deleted NPL, and Superfund Alternative Approach Sites), https://www.epa.gov/superfund/superfund-data-and-reports.
+  - U.S. Environmental Protection Agency, Office of Mission Support (2025). NPL Superfund Site Boundaries (EPA Public), https://www.arcgis.com/home/item.html?id=d6e1591d9a424f1fa6d95a02095a06d7.
+  - Centers for Medicare & Medicaid Services (2020). Medicaid and CHIP T-MSIS Analytic Inpatient file. **Restricted data containing protected health information; not publicly accessible.**
+  
 ### Acknowledgements
 We are grateful to Shreya Nalluri, Amruta Nori-Sarma, Mary Willis, and Flannery Black-Ingersoll for their thoughtful discussions on Medicaid birth outcome data. The simulations in this paper were run on the FASRC cluster supported by the FAS Division of Science Research Computing Group at Harvard University. The outcome analysis was run in the Harvard Regulated Data Environment supported by the 
 University Research Computing and Data Services group at Harvard University.
