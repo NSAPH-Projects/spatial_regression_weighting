@@ -10,7 +10,8 @@ This repository contains the code for the simulation and data application sectio
 We link publicly available U.S. Environmental Protection Agency information on 1,429 Superfund sites with high-resolution 1990 Census covariates and Medicaid birth outcomes from 2016–2018. We define a binary exposure indicating whether a site was remediated between 1991 and 2015. For each site and its 2-km buffer, we assemble eleven sociodemographic covariates, five indicators of contaminant types, and site scores. Exposure and confounders are publicly available on Harvard Dataverse at https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/EKSCCU. Birth outcomes (the percentages of small vulnerable newborns and congenital anomalies) are aggregated from zip code tabulation area-level Medicaid claims, yielding a final analytic sample of 1,079 Superfund sites. Medicaid claims data is stored on the Harvard Regulated Data Environment and is not publicly available. 
 
 ### Acknowledgements
-We are grateful to Shreya Nalluri, Amruta Nori-Sarma, Mary Willis, and Flannery Black-Ingersoll for their thoughtful discussions on Medicaid birth outcome data. The simulations in this paper were run on the FASRC cluster supported by the FAS Division of Science Research Computing Group at Harvard University. 
+We are grateful to Shreya Nalluri, Amruta Nori-Sarma, Mary Willis, and Flannery Black-Ingersoll for their thoughtful discussions on Medicaid birth outcome data. The simulations in this paper were run on the FASRC cluster supported by the FAS Division of Science Research Computing Group at Harvard University. The outcome analysis was supported by the Harvard Regulated Data Environment provided by the 
+University Research Computing and Data Services group at Harvard University.
  
 ### Paper
 The paper associated with this repository is available on arXiv:
