@@ -21,8 +21,7 @@ We link publicly available U.S. Environmental Protection Agency information on 1
   - Centers for Medicare & Medicaid Services (2020). Medicaid and CHIP T-MSIS Analytic Inpatient file. **Restricted data containing protected health information; not publicly accessible.**
   
 ### Acknowledgements
-We are grateful to Shreya Nalluri, Amruta Nori-Sarma, Mary Willis, and Flannery Black-Ingersoll for their thoughtful discussions on Medicaid birth outcome data. The simulations in this paper were run on the FASRC cluster supported by the FAS Division of Science Research Computing Group at Harvard University. The outcome analysis was run in the Harvard Regulated Data Environment supported by the 
-University Research Computing and Data Services group at Harvard University.
+We are grateful to Shreya Nalluri, Amruta Nori-Sarma, Mary Willis, and Flannery Black-Ingersoll for their thoughtful discussions on Medicaid birth outcome data. The simulations in this paper were run on the FASRC Cannon cluster, supported by the FAS Division of Science Research Computing Group at Harvard University. The outcome analysis was run on Regulated Data (ReD) Environment, operated by Harvard University Information Technology and supported by the Office of the Vice Provost for Research at Harvard University. 
  
 ### Paper
 The paper associated with this repository is available on arXiv:
