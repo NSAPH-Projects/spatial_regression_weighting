@@ -48,15 +48,15 @@ g <- ggplot() +
   # Use the same variable for color and shape scales with unified legend
   scale_color_manual(
     values = c("0" = "orange", "1" = "dodgerblue"),
-    name = "Binary exposure (Remediation)",
-    labels = c("Unexposed", "Exposed")
+    name = "Binary treatment (Remediation)",
+    labels = c("Control", "Treated")
   ) +
   scale_shape_manual(
-    values = c("0" = 16, "1" = 17), # Circle for Unexposed, triangle for Exposed
-    name = "Binary exposure (Remediation)",
-    labels = c("Unexposed", "Exposed")
+    values = c("0" = 16, "1" = 17), # Circle for Control, triangle for Treated
+    name = "Binary treatment (Remediation)",
+    labels = c("Control", "Treated")
   )
-png('images/Exposure.png', width = 1500, height = 900, res = 160)
+png('images/treatment.png', width = 1500, height = 900, res = 160)
 plot_with_insets(g) 
 dev.off()
 
@@ -80,15 +80,15 @@ g <- ggplot() +
   # Use the same variable for color and shape scales with unified legend
   scale_color_manual(
     values = c("0" = "orange", "1" = "dodgerblue"),
-    name = "Binary exposure (Cleanup)",
-    labels = c("Unexposed", "Exposed")
+    name = "Binary treatment (Cleanup)",
+    labels = c("Control", "Treated")
   ) +
   scale_fill_manual(
     values = c("0" = "orange", "1" = "dodgerblue"),
-    name = "Binary exposure (Cleanup)",
-    labels = c("Unexposed", "Exposed")
+    name = "Binary treatment (Cleanup)",
+    labels = c("Control", "Treated")
   )
-png('images/Exposure_with_buffers.png', width = 4000, height = 2400, res = 400)
+png('images/treatment_with_buffers.png', width = 4000, height = 2400, res = 400)
 plot_with_insets(g) 
 dev.off()
 
@@ -168,12 +168,12 @@ g <- ggplot() +
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 0,]$CARiw, na.rm = TRUE), 
                                   max(buffers_merged_geo[buffers_merged_geo$Z == 0,]$CARiw, na.rm = TRUE)),
                        labels = function(x) sprintf("%.3f", x),
-                       name = "Implied weights (Unexposed)",
+                       name = "Implied weights (Control)",
                        guide = guide_colorbar(order = 2)) +  
   
   new_scale_fill() +  
   
-  # Exposed group (Z == 1): Green triangle with black outline
+  # Treated group (Z == 1): Green triangle with black outline
   geom_sf(data = buffers_merged_geo[buffers_merged_geo$Z == 1,], 
           aes(fill = CARiw, shape = factor(Z)), 
           size = 1.25, alpha = 0.7, stroke = 0.25, color = "black") +  
@@ -182,13 +182,13 @@ g <- ggplot() +
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 1,]$CARiw, na.rm = TRUE), 
                                   max(buffers_merged_geo[buffers_merged_geo$Z == 1,]$CARiw, na.rm = TRUE)),
                        labels = function(x) sprintf("%.3f", x),
-                       name = "Implied weights (Exposed)",
+                       name = "Implied weights (Treated)",
                        guide = guide_colorbar(order = 3)) +  
   labs(
     title = "Intrinsic Conditional Autoregressive",
     x = "Longitude",
     y = "Latitude",
-    shape = "Exposure",
+    shape = "Treatment",
     fill = "Implied weights"
   ) +
   theme_minimal() +
@@ -228,7 +228,7 @@ g <- ggplot() +
   # Base map with county outlines
   geom_sf(data = states, fill = NA, color = "darkgray", linetype = "solid", size = 0.5) +
   
-  # Unexposed group (Z == 0): Red circle with black outline
+  # Control group (Z == 0): Red circle with black outline
   geom_point(
     data     = filter(pts, Z == 0),
     aes(X, Y, fill = REiw, shape = factor(Z)),
@@ -243,12 +243,12 @@ g <- ggplot() +
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 0,]$REiw, na.rm = TRUE), 
                                   max(buffers_merged_geo[buffers_merged_geo$Z == 0,]$REiw, na.rm = TRUE)),
                        labels = function(x) sprintf("%.3f", x),
-                       name = "Implied weights (Unexposed)",
+                       name = "Implied weights (Control)",
                        guide = guide_colorbar(order = 2)) +  
   
   new_scale_fill() +  
   
-  # Exposed group (Z == 1): Green triangle with black outline
+  # Treated group (Z == 1): Green triangle with black outline
   geom_sf(data = buffers_merged_geo[buffers_merged_geo$Z == 1,], 
           aes(fill = REiw, shape = factor(Z)),
           size = 1.25, alpha = 0.7, stroke = 0.25, color = "black") +  
@@ -257,13 +257,13 @@ g <- ggplot() +
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 1,]$REiw, na.rm = TRUE), 
                                   max(buffers_merged_geo[buffers_merged_geo$Z == 1,]$REiw, na.rm = TRUE)),
                        labels = function(x) sprintf("%.3f", x),
-                       name = "Implied weights (Exposed)",
+                       name = "Implied weights (Treated)",
                        guide = guide_colorbar(order = 3)) +  
   labs(
     title = "Random Effects",
     x = "Longitude",
     y = "Latitude",
-    shape = "Exposure",
+    shape = "Treatment",
     fill = "Implied weights"
   ) +
   theme_minimal() +
@@ -302,7 +302,7 @@ g <- ggplot() +
   # Base map with county outlines
   geom_sf(data = states, fill = NA, color = "darkgray", linetype = "solid", size = 0.5) +
   
-  # Unexposed group (Z == 0): Red circle with black outline
+  # Control group (Z == 0): Red circle with black outline
   geom_point(
     data     = filter(pts, Z == 0),
     aes(X, Y, fill = GPiw, shape = factor(Z)),
@@ -317,12 +317,12 @@ g <- ggplot() +
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 0,]$GPiw, na.rm = TRUE), 
                                   max(buffers_merged_geo[buffers_merged_geo$Z == 0,]$GPiw, na.rm = TRUE)),
                        labels = function(x) sprintf("%.3f", x),
-                       name = "Implied weights (Unexposed)",
+                       name = "Implied weights (Control)",
                        guide = guide_colorbar(order = 2)) +  
   
   new_scale_fill() +  
   
-  # Exposed group (Z == 1): Green triangle with black outline
+  # Treated group (Z == 1): Green triangle with black outline
   geom_sf(data = buffers_merged_geo[buffers_merged_geo$Z == 1,],
           aes(fill = GPiw, shape = factor(Z)),
           size = 1.25, alpha = 0.7, stroke = 0.25, color = "black") +
@@ -331,13 +331,13 @@ g <- ggplot() +
                        breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 1,]$GPiw, na.rm = TRUE), 
                                   max(buffers_merged_geo[buffers_merged_geo$Z == 1,]$GPiw, na.rm = TRUE)),
                        labels = function(x) sprintf("%.3f", x),
-                       name = "Implied weights (Exposed)",
+                       name = "Implied weights (Treated)",
                        guide = guide_colorbar(order = 3)) +
   labs(
     title = "Gaussian Process",
     x = "Longitude",
     y = "Latitude",
-    shape = "Exposure",
+    shape = "Treatment",
     fill = "Implied weights"
   ) +
   theme_minimal() +
@@ -751,7 +751,7 @@ plot_with_insets(g)
 dev.off()
 
 ################ PLOT OF PROPERTIES OF THE WEIGHTS ##############
-# Calculate the proportion of Unexposed neighbors each Exposed unit has and the number of Exposed neighbors that each Unexposed unit has
+# Calculate the proportion of Control neighbors each Treated unit has and the number of Treated neighbors that each Control unit has
 buffers_merged_geo <- st_transform(buffers_merged, crs = 4326)
 
 prop_neighbors_opposite <- rep(NA, nrow(buffers_merged_geo))
@@ -765,12 +765,12 @@ for (i in 1:nrow(buffers_merged_geo)) {
 g1 <- ggplot(buffers_merged_geo, aes(x = prop_neighbors_opposite, y = abs(CARiw))) +
   geom_point() +
   labs(title = "Conditional Autoregressive",
-       x = "Proportion of neighbors with the opposite Exposure status",
+       x = "Proportion of neighbors with the opposite treatment status",
        y = "absolute implied weight") +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5)) 
 
-# Calculate the proportion of Unexposed neighbors each Exposed unit has and the number of Exposed neighbors that each Unexposed unit has
+# Calculate the proportion of Control neighbors each Treated unit has and the number of Treated neighbors that each Control unit has
 prop_distanceneighbors_opposite <- rep(NA, nrow(buffers_merged_geo))
 for (i in 1:nrow(buffers_merged_geo)) {
   if (buffers_merged_geo$Z[i] == 1) {
@@ -784,12 +784,12 @@ g2 <- ggplot(buffers_merged_geo,
              aes(x = prop_distanceneighbors_opposite, y = abs(GPiw))) + # 
   geom_point() +
   labs(title = "Gaussian Process",
-       x = "Proportion of sites within 200km with the opposite Exposure status",
+       x = "Proportion of sites within 200km with the opposite treatment status",
        y = "absolute implied weight") +
   theme_minimal() + 
   theme(plot.title = element_text(hjust = 0.5))
 
-# Calculate the proportion of Unexposed units in a cluster for each Exposed unit and the proportion of Exposed units in a cluster for each Unexposed unit
+# Calculate the proportion of Control units in a cluster for each Treated unit and the proportion of Treated units in a cluster for each Control unit
 prop_cluster_opposite <- rep(NA, nrow(buffers_merged_geo))
 for (i in 1:nrow(buffers_merged_geo)) {
   if (buffers_merged_geo$Z[i] == 1) {
@@ -801,7 +801,7 @@ for (i in 1:nrow(buffers_merged_geo)) {
 g3 <- ggplot(buffers_merged_geo, aes(x = prop_cluster_opposite, y = abs(REiw))) +
   geom_point() +
   labs(title = "Random Effects",
-       x = "Proportion of units in the same state with the opposite Exposure status",
+       x = "Proportion of units in the same state with the opposite treatment status",
        y = "absolute implied weight") +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))
