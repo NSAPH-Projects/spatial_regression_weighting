@@ -162,11 +162,11 @@ g <- ggplot() +
     alpha = 0.7,
     stroke   = 0.25, 
     color    = "black",
-    position = position_nudge(x = 0, y = 0)  # ← correct placement
+    position = position_nudge(x = -0.3, y = 0)  # ← correct placement
   ) +
   scale_fill_gradient2(low = "dodgerblue", mid = "white", high = "orange", midpoint = 0, 
-                       breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 0,]$CARiw, na.rm = TRUE), 
-                                  max(buffers_merged_geo[buffers_merged_geo$Z == 0,]$CARiw, na.rm = TRUE)),
+                       breaks = c(-0.003, 0.005),
+                       limits = c(-0.0031, 0.0051),
                        labels = function(x) sprintf("%.3f", x),
                        name = "Implied weights (Control)",
                        guide = guide_colorbar(order = 2)) +  
@@ -179,8 +179,8 @@ g <- ggplot() +
           size = 1.25, alpha = 0.7, stroke = 0.25, color = "black") +  
   
   scale_fill_gradient2(low = "orange", mid = "white", high = "dodgerblue", midpoint = 0, 
-                       breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 1,]$CARiw, na.rm = TRUE), 
-                                  max(buffers_merged_geo[buffers_merged_geo$Z == 1,]$CARiw, na.rm = TRUE)),
+                       breaks = c(0, 0.008),
+                       limits = c(-0.0001, 0.0081),
                        labels = function(x) sprintf("%.3f", x),
                        name = "Implied weights (Treated)",
                        guide = guide_colorbar(order = 3)) +  
@@ -198,24 +198,24 @@ g <- ggplot() +
     axis.ticks = element_blank(),
     axis.title = element_blank(),
     plot.title = element_text(hjust = 0.5),
-    legend.position = "right",
+    legend.position = "left",
     legend.key.height = unit(0.2, "cm")
   )
 
 inset_CAR <- g + 
-  coord_sf(xlim = c(-94,-89), ylim = c(29,33)) +
+  coord_sf(xlim = c(-86,-80), ylim = c(25.25,30.5)) +
   theme(
     legend.position = "none",
     plot.title = element_blank(),
     plot.background = element_rect(color = "black", linewidth = 1)
   )
 
-gCAR_main <- plot_with_insets(g)
+gCAR_main <- plot_with_insets(g,xshift = 0.25)
 
-# Now use ggdraw with extended xlim so negative x is inside the canvas
-gCAR <- ggdraw(xlim = c(-0.2, 1.1), ylim = c(0, 1)) +
+# Now use ggdraw with extended xlim 
+gCAR <- ggdraw(xlim = c(0, 1.1), ylim = c(0, 1)) +
   draw_plot(gCAR_main, x = 0,   y = 0, width = 1.1,   height = 1.1) +
-  draw_plot(inset_CAR,  x = -0.25, y = 0.3, width = 0.35, height = 0.2, scale = 1.5)
+  draw_plot(inset_CAR,  x = 0.825, y = 0.12, width = 0.35, height = 0.2, scale = 1.9)
 
 # Plot  FE
 buffers_merged_geo <- buffers_merged_geo[order(buffers_merged_geo$REiw),]
@@ -236,12 +236,12 @@ g <- ggplot() +
     alpha = 0.7,
     stroke   = 0.25, 
     color    = "black",
-    position = position_nudge(x = 0, y = 0)  # ← correct placement
+    position = position_nudge(x = -0.3, y = 0)  # ← correct placement
   ) +
   
   scale_fill_gradient2(low = "dodgerblue", mid = "white", high = "orange", midpoint = 0, 
-                       breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 0,]$REiw, na.rm = TRUE), 
-                                  max(buffers_merged_geo[buffers_merged_geo$Z == 0,]$REiw, na.rm = TRUE)),
+                       breaks = c(-0.003, 0.005),
+                       limits = c(-0.0031, 0.0051),
                        labels = function(x) sprintf("%.3f", x),
                        name = "Implied weights (Control)",
                        guide = guide_colorbar(order = 2)) +  
@@ -254,8 +254,8 @@ g <- ggplot() +
           size = 1.25, alpha = 0.7, stroke = 0.25, color = "black") +  
   
   scale_fill_gradient2(low = "orange", mid = "white", high = "dodgerblue", midpoint = 0, 
-                       breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 1,]$REiw, na.rm = TRUE), 
-                                  max(buffers_merged_geo[buffers_merged_geo$Z == 1,]$REiw, na.rm = TRUE)),
+                       breaks = c(0, 0.008),
+                       limits = c(-0.0001, 0.0081),
                        labels = function(x) sprintf("%.3f", x),
                        name = "Implied weights (Treated)",
                        guide = guide_colorbar(order = 3)) +  
@@ -273,24 +273,24 @@ g <- ggplot() +
     axis.ticks = element_blank(),
     axis.title = element_blank(),
     plot.title = element_text(hjust = 0.5),
-    legend.position = "right",
+    legend.position = "left",
     legend.key.height = unit(0.2, "cm")
   )
 
 inset_RE <- g + 
-  coord_sf(xlim = c(-94,-89), ylim = c(29,33)) +
+  coord_sf(xlim = c(-86,-80), ylim = c(25.25,30.5)) +
   theme(
     legend.position = "none",
     plot.title = element_blank(),
     plot.background = element_rect(color = "black", linewidth = 1)
   )
 
-gRE_main <- plot_with_insets(g)
+gRE_main <- plot_with_insets(g,xshift = 0.25)
 
-# Now use ggdraw with extended xlim so negative x is inside the canvas
-gRE <- ggdraw(xlim = c(-0.2, 1.1), ylim = c(0, 1)) +
+# Now use ggdraw with extended xlim 
+gRE <- ggdraw(xlim = c(0, 1.1), ylim = c(0, 1)) +
   draw_plot(gRE_main, x = 0,   y = 0, width = 1.1,   height = 1.1) +
-  draw_plot(inset_RE,  x = -0.25, y = 0.3, width = 0.35, height = 0.2, scale = 1.5)
+  draw_plot(inset_RE,  x = 0.825, y = 0.12, width = 0.35, height = 0.2, scale = 1.9)
 
 # Plot  GP
 buffers_merged_geo <- buffers_merged_geo[order(buffers_merged_geo$GPiw),]
@@ -310,12 +310,12 @@ g <- ggplot() +
     alpha = 0.7,
     stroke   = 0.25, 
     color    = "black",
-    position = position_nudge(x = 0, y = 0)  # ← correct placement
+    position = position_nudge(x = -0.3, y = 0)
   ) +
 
   scale_fill_gradient2(low = "dodgerblue", mid = "white", high = "orange", midpoint = 0, 
-                       breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 0,]$GPiw, na.rm = TRUE), 
-                                  max(buffers_merged_geo[buffers_merged_geo$Z == 0,]$GPiw, na.rm = TRUE)),
+                       breaks = c(-0.003, 0.005),
+                       limits = c(-0.0031, 0.0051),
                        labels = function(x) sprintf("%.3f", x),
                        name = "Implied weights (Control)",
                        guide = guide_colorbar(order = 2)) +  
@@ -328,8 +328,8 @@ g <- ggplot() +
           size = 1.25, alpha = 0.7, stroke = 0.25, color = "black") +
   
   scale_fill_gradient2(low = "orange", mid = "white", high = "dodgerblue", midpoint = 0,
-                       breaks = c(min(buffers_merged_geo[buffers_merged_geo$Z == 1,]$GPiw, na.rm = TRUE), 
-                                  max(buffers_merged_geo[buffers_merged_geo$Z == 1,]$GPiw, na.rm = TRUE)),
+                       breaks = c(0, 0.008),
+                       limits = c(-0.0001, 0.0081),
                        labels = function(x) sprintf("%.3f", x),
                        name = "Implied weights (Treated)",
                        guide = guide_colorbar(order = 3)) +
@@ -347,26 +347,26 @@ g <- ggplot() +
     axis.ticks = element_blank(),
     axis.title = element_blank(),
     plot.title = element_text(hjust = 0.5),
-    legend.position = "right",
+    legend.position = "left",
     legend.key.height = unit(0.2, "cm")
   )
 inset_GP <- g + 
-  coord_sf(xlim = c(-94,-89), ylim = c(29,33)) +
+  coord_sf(xlim = c(-86,-80), ylim = c(25.25,30.5)) +
   theme(
     legend.position = "none",
     plot.title = element_blank(),
     plot.background = element_rect(color = "black", linewidth = 1)
   )
 
-gGP_main <- plot_with_insets(g)
+gGP_main <- plot_with_insets(g, xshift = 0.25)
 
-# Now use ggdraw with extended xlim so negative x is inside the canvas
-gGP <- ggdraw(xlim = c(-0.2, 1.1), ylim = c(0, 1)) +
+# Now use ggdraw with extended xlim 
+gGP <- ggdraw(xlim = c(0, 1.1), ylim = c(0, 1)) +
   draw_plot(gGP_main, x = 0,   y = 0, width = 1.1,   height = 1.1) +
-  draw_plot(inset_GP,  x = -0.25, y = 0.3, width = 0.35, height = 0.2, scale = 1.5)
+  draw_plot(inset_GP,  x = 0.825, y = 0.12, width = 0.35, height = 0.2, scale = 1.9)
 
 #png('images/impliedweights_us.png', width = 1500, height = 2000, res = 230)
-png('images/impliedweights_us_dec7.png', width = 2100, height = 2500, res = 300) 
+png('images/impliedweights_us_dec18.png', width = 2300, height = 3150, res = 300) 
 grid.arrange(gRE, gCAR, gGP, ncol = 1)
 dev.off()
 

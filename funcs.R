@@ -1,4 +1,4 @@
-plot_with_insets <- function(giant_plot){
+plot_with_insets <- function(giant_plot, xshift = 0, yshift = 0){
   # giant_plot is a ggplot object with the entire US
   # returns a ggdraw object with mainland, Alaska, and Hawaii insets
   mainland_plot <- giant_plot + coord_sf(xlim = c(-125, -65), ylim = c(25, 50))
@@ -8,9 +8,9 @@ plot_with_insets <- function(giant_plot){
     theme(legend.position = "none", plot.title = element_blank())
   g <- ggdraw(mainland_plot) +
     draw_plot(alaska_plot, width = 0.26, height = 0.26 * 10/6 * 0.8, 
-              x = 0, y = -0.03) +
+              x = xshift, y = yshift-0.03) +
     draw_plot(hawaii_plot, width = 0.15, height = 0.15 * 10/6 * 0.8, 
-              x = 0.2, y = 0)
+              x = xshift + 0.2, y = yshift)
   return(g)
 }
 
